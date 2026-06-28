@@ -104,7 +104,8 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
             Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
                 modifier = Modifier.size(18.dp).clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
-            AirPlayButton(vm, Modifier.size(22.dp))
+            AirPlayButton(vm)
+            Spacer(Modifier.width(8.dp))
             CastButton(Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
             TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
@@ -293,7 +294,7 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                 // AirPlay + Cast buttons overlaid top-left (mirror the X); each hidden when no
                 // device of that type is found.
                 Row(Modifier.align(Alignment.TopStart).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AirPlayButton(vm, Modifier.size(22.dp))
+                    AirPlayButton(vm)
                     Spacer(Modifier.width(10.dp))
                     CastButton(Modifier.size(28.dp))
                 }

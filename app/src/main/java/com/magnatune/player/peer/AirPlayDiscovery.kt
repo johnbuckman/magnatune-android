@@ -20,6 +20,10 @@ class AirPlayDiscovery(context: Context) {
 
     val devices = MutableStateFlow<List<Device>>(emptyList())
 
+    /** The currently chosen AirPlay device (UI selection; streaming not yet wired). */
+    val selected = MutableStateFlow<Device?>(null)
+    fun select(device: Device?) { selected.value = device }
+
     private val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private val found = ConcurrentHashMap<String, Device>()
     private var listener: NsdManager.DiscoveryListener? = null
