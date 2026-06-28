@@ -74,6 +74,9 @@ class PlaybackController(
                     controller?.let {
                         positionMs.value = it.currentPosition.coerceAtLeast(0)
                         durationMs.value = it.duration.coerceAtLeast(0)
+                        // Keep the current track in sync with the index even if the transition
+                        // callback is missed (e.g. our custom CrossfadePlayer swapping internally).
+                        syncCurrent()
                     }
                 }
             }

@@ -130,7 +130,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // (centered). The height is shown in full — never cropped top/bottom. `fullBleedWidth`
             // expands it past the Column's 8dp horizontal padding so it truncates right at the card
             // edges instead of a few px short.
-            val mascotH = 150.dp
+            val mascotH = 105.dp
             Box(
                 Modifier.fillMaxWidth().fullBleedWidth(8.dp).height(mascotH).offset(y = 10.dp).clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.Center,

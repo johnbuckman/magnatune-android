@@ -54,6 +54,7 @@ class CrossfadePlayer(
     private var released = false
 
     private var crossfading = false
+    private var crossfadeStartMs = 0L
     private var nextPrepared = false   // inactive holds items[currentIndex+1]
 
     private val handler = Handler(looper)
@@ -188,28 +189,36 @@ class CrossfadePlayer(
 
     private fun tick() {
         if (items.isEmpty()) return
-        // Non-crossfade advance: when the active item ends, swap to the prefetched next.
-        if (active.playbackState == Player.STATE_ENDED && !crossfading) {
+        val xf = crossfadeMs()
+
+        if (crossfading) {
+            // Ramp by WALL-CLOCK time since the fade started, then swap — independent of the stream's
+            // (sometimes unreliable) reported duration/position, so it always completes.
+            val elapsed = android.os.SystemClock.elapsedRealtime() - crossfadeStartMs
+            val f = (elapsed.toFloat() / xf).coerceIn(0f, 1f)
+            active.volume = (1f - f) * masterVolume
+            inactive.volume = f * masterVolume
+            if (f >= 1f || active.playbackState == Player.STATE_ENDED) swapToNext(hardCut = false)
+            return
+        }
+
+        // Not crossfading: a finished track hard-swaps to the prefetched next (or stops).
+        if (active.playbackState == Player.STATE_ENDED) {
             if (hasNextItem()) swapToNext(hardCut = true) else { playWhenReadyState = false; invalidateState() }
             return
         }
-        if (!playWhenReadyState || !crossfadeEnabled() || !hasNextItem()) return
+        if (!playWhenReadyState || !crossfadeEnabled() || !hasNextItem() || !nextPrepared) return
         val dur = active.duration
         if (dur <= 0) return
         val remaining = dur - active.currentPosition
-        val xf = crossfadeMs()
-        if (!crossfading && remaining in 1..xf && nextPrepared) beginCrossfade()
-        if (crossfading) {
-            val f = (1f - (remaining.toFloat() / xf)).coerceIn(0f, 1f)
-            active.volume = (1f - f) * masterVolume
-            inactive.volume = f * masterVolume
-            if (remaining <= 60 || active.playbackState == Player.STATE_ENDED) swapToNext(hardCut = false)
-        }
+        if (remaining in 1..xf) beginCrossfade()
     }
 
     private fun beginCrossfade() {
         crossfading = true
+        crossfadeStartMs = android.os.SystemClock.elapsedRealtime()
         inactive.volume = 0f
+        inactive.seekTo(0)
         inactive.playWhenReady = playWhenReadyState
     }
 
