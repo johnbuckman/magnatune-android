@@ -1,5 +1,6 @@
 package com.magnatune.player.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,7 +101,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
             FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 18.dp,
                 modifier = Modifier.clickable { controller.setVolume(0f) })
             SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
+                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp), dotThumb = true)
             FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 18.dp,
                 modifier = Modifier.clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
@@ -151,26 +152,32 @@ private fun accentSlider() = SliderDefaults.colors(
     inactiveTrackColor = MagSecondary.copy(alpha = 0.25f),
 )
 
-/** Slider with a short thumb (50% shorter than the default M3 thumb) — used for both the
- *  play-position bar and the volume control. */
+/** Slider with a short thumb. Play-position bar uses the vertical-bar thumb; the volume control
+ *  uses a round dot thumb ([dotThumb] = true). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun SeekSlider(
     value: Float, enabled: Boolean,
     onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
+    dotThumb: Boolean = false,
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Slider(
         value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished,
         enabled = enabled, interactionSource = interaction, colors = accentSlider(), modifier = modifier,
         thumb = {
-            SliderDefaults.Thumb(
-                interactionSource = interaction,
-                colors = accentSlider(),
-                enabled = enabled,
-                thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
-            )
+            if (dotThumb) {
+                Box(Modifier.size(14.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(MagAccent))
+            } else {
+                SliderDefaults.Thumb(
+                    interactionSource = interaction,
+                    colors = accentSlider(),
+                    enabled = enabled,
+                    thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
+                )
+            }
         },
     )
 }
@@ -286,7 +293,7 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                         FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 20.dp,
                             modifier = Modifier.clickable { controller.setVolume(0f) })
                         SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                            modifier = Modifier.width(140.dp).padding(horizontal = 10.dp))
+                            modifier = Modifier.width(140.dp).padding(horizontal = 10.dp), dotThumb = true)
                         FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 20.dp,
                             modifier = Modifier.clickable { controller.setVolume(1f) })
                     }
