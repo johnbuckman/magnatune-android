@@ -125,7 +125,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // the column — matches iOS.
             Box(
                 Modifier.fillMaxWidth().height(280.dp)
-                    .offset(y = 20.dp)
+                    .offset(y = 10.dp)
                     .clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
