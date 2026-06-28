@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -83,7 +84,7 @@ private fun iconFor(tab: NavTab): ImageVector = when (tab) {
 fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable () -> Unit = {}) {
     val nav = rememberNavController()
     Row(Modifier.fillMaxSize()) {
-        NavSidebar(nav, Modifier.width(180.dp).fillMaxHeight())
+        NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
             ContentTopBar(nav)
             MainNav(vm, nav, onPlay, Modifier.weight(1f))
@@ -96,7 +97,10 @@ fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (
 private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
-    Surface(color = MagCard, modifier = modifier) {
+    Surface(
+        color = MagCard, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        shadowElevation = 2.dp, modifier = modifier,
+    ) {
         androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight().padding(8.dp)) {
             // Wordmark logo (top-left).
             androidx.compose.foundation.Image(
@@ -104,10 +108,10 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                 contentDescription = "Magnatune",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 alignment = androidx.compose.ui.Alignment.CenterStart,
-                modifier = Modifier.fillMaxWidth().height(40.dp).padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
+                modifier = Modifier.fillMaxWidth().height(28.dp).padding(start = 8.dp, top = 6.dp, bottom = 4.dp),
             )
             androidx.compose.foundation.layout.Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 8.dp),
             ) {
                 NavTab.entries.filter { it != NavTab.SETTINGS }.forEach { tab ->
                     NavRow(tab, current == tab.route) {
@@ -115,13 +119,19 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                     }
                 }
             }
-            // Mascot above Settings.
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
-                contentDescription = null,
-                modifier = Modifier.size(56.dp).align(androidx.compose.ui.Alignment.CenterHorizontally)
-                    .padding(vertical = 4.dp),
-            )
+            // Mascot above Settings: wide (1000x392), centered, with its left/right edges clipped to
+            // the column — matches iOS.
+            Box(
+                Modifier.fillMaxWidth().height(96.dp).clipToBounds(),
+                contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.height(96.dp).width(245.dp),
+                )
+            }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
                 nav.navigate(NavTab.SETTINGS.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
             }
