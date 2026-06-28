@@ -67,6 +67,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
     val playing by controller.isPlaying.collectAsStateWithLifecycle()
     val pos by controller.positionMs.collectAsStateWithLifecycle()
     val dur by controller.durationMs.collectAsStateWithLifecycle()
+    val vol by controller.volume.collectAsStateWithLifecycle()
     val remote by vm.container.remoteFocus.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
     var scrubbing by remember { mutableStateOf<Float?>(null) }
@@ -95,8 +96,13 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
                 Text(t?.artistName ?: "Magnatune", style = MaterialTheme.typography.bodySmall,
                     color = MagSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // Volume: a single speaker icon that floats a slider popover on tap (declutters the bar).
-            VolumeButton(controller)
+            // Inline volume slider with mute (left) / full (right) icons, in place.
+            FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(0f) })
+            SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
+            FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
             AirPlayButton(vm)
             Spacer(Modifier.width(8.dp))
@@ -136,49 +142,6 @@ private fun Card(content: @Composable androidx.compose.foundation.layout.ColumnS
             .magCardShadow(),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), content = content)
-    }
-}
-
-private fun volumeGlyph(v: Float): String =
-    if (v < 0.01f) Fa.volumeOff else if (v < 0.5f) Fa.volumeLow else Fa.volumeHigh
-
-/** A single speaker icon; tapping it floats a volume-slider popover above (iOS-style), so the
- *  mini-player bar stays uncluttered. */
-@Composable
-private fun VolumeButton(controller: PlaybackController) {
-    val vol by controller.volume.collectAsStateWithLifecycle()
-    var show by remember { mutableStateOf(false) }
-    FaIcon(volumeGlyph(vol), "Volume", tint = MagSecondary, size = 20.dp,
-        modifier = Modifier.clickable { show = true })
-    if (show) {
-        androidx.compose.ui.window.Popup(
-            popupPositionProvider = object : androidx.compose.ui.window.PopupPositionProvider {
-                override fun calculatePosition(
-                    anchorBounds: androidx.compose.ui.unit.IntRect,
-                    windowSize: androidx.compose.ui.unit.IntSize,
-                    layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-                    popupContentSize: androidx.compose.ui.unit.IntSize,
-                ): androidx.compose.ui.unit.IntOffset {
-                    val x = (anchorBounds.left + anchorBounds.width / 2 - popupContentSize.width / 2)
-                        .coerceIn(8, (windowSize.width - popupContentSize.width - 8).coerceAtLeast(8))
-                    val y = (anchorBounds.top - popupContentSize.height - 12).coerceAtLeast(8)
-                    return androidx.compose.ui.unit.IntOffset(x, y)
-                }
-            },
-            onDismissRequest = { show = false },
-            properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-        ) {
-            Surface(color = MagCard, shape = RoundedCornerShape(12.dp), modifier = Modifier.magCardShadow()) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 16.dp,
-                        modifier = Modifier.clickable { controller.setVolume(0f) })
-                    SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                        modifier = Modifier.width(150.dp).padding(horizontal = 8.dp))
-                    FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 16.dp,
-                        modifier = Modifier.clickable { controller.setVolume(1f) })
-                }
-            }
-        }
     }
 }
 
