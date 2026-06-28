@@ -40,6 +40,9 @@
             </intent-filter>
         </service>
 
-        <!-- Cast OPTIONS_PROVIDER meta-data added in Phase 8. -->
+        <!-- Google Cast options provider. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.magnatune.player.peer.CastOptionsProvider" />
     </application>
 </manifest>

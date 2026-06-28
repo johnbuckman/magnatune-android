@@ -39,6 +39,21 @@ class AppContainer(context: Context) {
 
     val downloads = DownloadManager(context, credentials, settings, userStore) { catalog }
 
+    /** LAN peer sync (NSD + TCP). Device name = manufacturer model. */
+    val peer = com.magnatune.player.peer.PeerService(
+        context = context,
+        deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim(),
+        scope = appScope,
+    ).also { p ->
+        p.onControl = { cmd ->
+            when (cmd) {
+                "playPause" -> playback.togglePlayPause()
+                "next" -> playback.next()
+                "prev" -> playback.previous()
+            }
+        }
+    }
+
     /** Whether the device currently has a usable network. */
     val isOnline = MutableStateFlow(true)
 
@@ -58,6 +73,21 @@ class AppContainer(context: Context) {
             .drop(1)
             .debounce(1500)
             .onEach { downloads.syncAutoDownloads() }
+            .launchIn(appScope)
+
+        // LAN peer sync: start/stop with the setting; broadcast playback state to peers.
+        settings.peerSharingEnabled
+            .onEach { if (it) peer.start() else peer.stop() }
+            .launchIn(appScope)
+        combine(playback.currentTrack, playback.isPlaying) { track, playing ->
+            com.magnatune.player.peer.PeerService.Snapshot(
+                state = if (track == null) "idle" else if (playing) "playing" else "paused",
+                songId = track?.id,
+                position = playback.positionMs.value / 1000.0,
+                startedAt = if (playing) System.currentTimeMillis() else null,
+            )
+        }
+            .onEach { peer.updateLocalState(it) }
             .launchIn(appScope)
     }
 
