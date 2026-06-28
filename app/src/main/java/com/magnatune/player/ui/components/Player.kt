@@ -1,6 +1,5 @@
 package com.magnatune.player.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magnatune.player.service.PlaybackController
 import com.magnatune.player.ui.theme.MagAccent
-import com.magnatune.player.ui.theme.MagBg
 import com.magnatune.player.ui.theme.MagCard
 import com.magnatune.player.ui.theme.magCardShadow
 import com.magnatune.player.ui.theme.MagSecondary
@@ -98,19 +96,13 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
                 Text(t?.artistName ?: "Magnatune", style = MaterialTheme.typography.bodySmall,
                     color = MagSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // Volume: mute / slider / full grouped inside a capsule pill (option 3).
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(MagBg)
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
-            ) {
-                FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 16.dp,
-                    modifier = Modifier.clickable { controller.setVolume(0f) })
-                SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                    modifier = Modifier.width(76.dp).padding(horizontal = 6.dp))
-                FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 16.dp,
-                    modifier = Modifier.clickable { controller.setVolume(1f) })
-            }
+            // Inline volume slider with mute (left) / full (right) icons.
+            FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(0f) })
+            SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
+            FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
             AirPlayButton(vm)
             Spacer(Modifier.width(8.dp))
@@ -159,32 +151,26 @@ private fun accentSlider() = SliderDefaults.colors(
     inactiveTrackColor = MagSecondary.copy(alpha = 0.25f),
 )
 
-/** Slider with a short thumb. Play-position bar uses the vertical-bar thumb; the volume control
- *  uses a round dot thumb ([dotThumb] = true). */
+/** Slider with a short thumb (50% shorter than the default M3 thumb) — used for both the
+ *  play-position bar and the volume control. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun SeekSlider(
     value: Float, enabled: Boolean,
     onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
-    dotThumb: Boolean = false,
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Slider(
         value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished,
         enabled = enabled, interactionSource = interaction, colors = accentSlider(), modifier = modifier,
         thumb = {
-            if (dotThumb) {
-                Box(Modifier.size(14.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(MagAccent))
-            } else {
-                SliderDefaults.Thumb(
-                    interactionSource = interaction,
-                    colors = accentSlider(),
-                    enabled = enabled,
-                    thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
-                )
-            }
+            SliderDefaults.Thumb(
+                interactionSource = interaction,
+                colors = accentSlider(),
+                enabled = enabled,
+                thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
+            )
         },
     )
 }
