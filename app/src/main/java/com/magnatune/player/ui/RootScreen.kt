@@ -123,17 +123,19 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             }
             // Mascot above Settings: wide (1000x392), centered, with its left/right edges clipped to
             // the column — matches iOS.
+            // Mascot: filled to the specified HEIGHT (the box height); since the image is far wider
+            // than the narrow sidebar, Crop scales it by height and truncates the left/right sides
+            // (centered). The height is shown in full — never cropped top/bottom.
+            val mascotH = 150.dp
             Box(
-                Modifier.fillMaxWidth().height(280.dp)
-                    .offset(y = 10.dp)
-                    .clipToBounds(),
+                Modifier.fillMaxWidth().height(mascotH).offset(y = 10.dp).clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(480.dp).width(1224.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
