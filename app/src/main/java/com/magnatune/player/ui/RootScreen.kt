@@ -132,8 +132,8 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(480.dp).width(1224.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().height(280.dp),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
