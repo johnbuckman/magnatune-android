@@ -94,10 +94,14 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
                 Text(t?.artistName ?: "Magnatune", style = MaterialTheme.typography.bodySmall,
                     color = MagSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // Inline volume (tablet) — short thumb, shifted ~20px left of the transport buttons.
-            Icon(volumeIcon(vol), null, tint = MagSecondary, modifier = Modifier.size(18.dp))
+            // Inline volume (tablet) — no-sound icon left, full-sound icon right; short thumb,
+            // shifted ~20px left of the transport buttons. Icons tap to mute / max.
+            Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
+                modifier = Modifier.size(18.dp).clickable { controller.setVolume(0f) })
             SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                modifier = Modifier.width(90.dp).padding(horizontal = 4.dp))
+                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
+            Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
+                modifier = Modifier.size(18.dp).clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(24.dp))
             TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
             Spacer(Modifier.width(6.dp))
@@ -250,9 +254,12 @@ private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit
                     IconButton(onClick = { controller.next() }) { Icon(Icons.Filled.SkipNext, "Next") }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(volumeIcon(vol), null, tint = MagSecondary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
+                        modifier = Modifier.size(20.dp).clickable { controller.setVolume(0f) })
                     SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                        modifier = Modifier.weight(1f).padding(start = 8.dp))
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
+                        modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
                 }
             }
         }
