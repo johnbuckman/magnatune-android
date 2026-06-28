@@ -47,8 +47,11 @@ fun AddToPlaylistButton(vm: MagnatuneViewModel, kind: String, id: Long, compact:
         modifier = Modifier.size(if (compact) 32.dp else 40.dp),
     ) {
         Icon(
-            if (onPlaylist) Icons.Filled.PlaylistRemove else Icons.AutoMirrored.Filled.PlaylistAdd,
+            androidx.compose.ui.res.painterResource(
+                if (onPlaylist) com.magnatune.player.R.drawable.ic_playlist_remove
+                else com.magnatune.player.R.drawable.ic_playlist_add),
             contentDescription = "Add to playlist", tint = if (onPlaylist) MagAccent else MagSecondary,
+            modifier = Modifier.size(20.dp),
         )
     }
     if (showSheet) AddToPlaylistSheet(vm, kind, id) { showSheet = false }

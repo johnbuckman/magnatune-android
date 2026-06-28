@@ -43,12 +43,19 @@ private fun fmt(ms: Long): String {
     return "%d:%02d".format(s / 60, s % 60)
 }
 
-/** Persistent bottom mini-player. Hidden when nothing is loaded. Tap to open Now Playing. */
+/** Persistent bottom mini-player. Shows local playback, or a remote-control bar when a peer is
+ *  playing while we're idle, or nothing. Tap to open Now Playing. */
 @Composable
-fun MiniPlayer(controller: PlaybackController) {
+fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
+    val controller = vm.playback
     val track by controller.currentTrack.collectAsStateWithLifecycle()
     val playing by controller.isPlaying.collectAsStateWithLifecycle()
-    val t = track ?: return
+    val remote by vm.container.remoteFocus.collectAsStateWithLifecycle()
+    val t = track
+    if (t == null) {
+        remote?.let { RemoteControlBar(vm, it) }
+        return
+    }
     var showNowPlaying by remember { mutableStateOf(false) }
 
     Surface(color = MagCard, modifier = Modifier.fillMaxWidth()) {
@@ -71,6 +78,32 @@ fun MiniPlayer(controller: PlaybackController) {
     }
 
     if (showNowPlaying) NowPlayingDialog(controller) { showNowPlaying = false }
+}
+
+/** Bar shown when controlling another Magnatune device over the LAN. */
+@Composable
+private fun RemoteControlBar(
+    vm: com.magnatune.player.ui.MagnatuneViewModel,
+    peer: com.magnatune.player.peer.PeerService.PeerInfo,
+) {
+    val songName by androidx.compose.runtime.produceState<String?>(null, peer.snapshot.songId) {
+        value = peer.snapshot.songId?.let { id ->
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { vm.container.catalog.song(id)?.name }
+        }
+    }
+    Surface(color = MagCard, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Controlling ${peer.name}", style = MaterialTheme.typography.labelSmall, color = MagSecondary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(songName ?: "Playing…", style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            IconButton(onClick = { vm.container.peer.sendControl(peer.id, "prev") }) { Icon(Icons.Filled.SkipPrevious, "Previous") }
+            IconButton(onClick = { vm.container.peer.sendControl(peer.id, "playPause") }) { Icon(Icons.Filled.Pause, "Play/Pause") }
+            IconButton(onClick = { vm.container.peer.sendControl(peer.id, "next") }) { Icon(Icons.Filled.SkipNext, "Next") }
+        }
+    }
 }
 
 @Composable

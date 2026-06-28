@@ -21,6 +21,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Immersive full-screen: hide the status + soft-navigation bars so they don't obscure the
+        // player; a swipe from the edge reveals them transiently.
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
 
         val container = (application as MagnatuneApp).container
         container.playback.connect()
@@ -38,9 +45,18 @@ class MainActivity : ComponentActivity() {
                 RootScreen(
                     vm = vm,
                     onPlay = { tracks, startAt -> container.playback.play(tracks, startAt) },
-                    miniPlayer = { MiniPlayer(container.playback) },
+                    miniPlayer = { MiniPlayer(vm) },
                 )
             }
+        }
+    }
+
+    /** Re-assert immersive mode when the window regains focus (system bars can reappear). */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                .hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
     }
 }

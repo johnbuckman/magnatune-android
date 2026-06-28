@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Process-wide singletons (a hand-rolled service locator — small app, no DI framework needed).
@@ -56,6 +57,14 @@ class AppContainer(context: Context) {
 
     /** Whether the device currently has a usable network. */
     val isOnline = MutableStateFlow(true)
+
+    /** The peer we'd surface for remote control: the most-recently-started peer that's playing
+     *  while local playback is idle (mirrors iOS remoteFocus — local playback always wins). */
+    val remoteFocus: kotlinx.coroutines.flow.StateFlow<com.magnatune.player.peer.PeerService.PeerInfo?> =
+        combine(peer.peers, playback.currentTrack) { peers, local ->
+            if (local != null) null
+            else peers.filter { it.snapshot.state == "playing" }.maxByOrNull { it.snapshot.startedAt ?: 0L }
+        }.stateIn(appScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
 
     init {
         // Connectivity tracking.

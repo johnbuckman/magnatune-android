@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.HeartBroken
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.HeartBroken
+import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +29,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import com.magnatune.player.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,19 +56,20 @@ fun FavoriteButton(vm: MagnatuneViewModel, kind: String, id: Long, compact: Bool
     val isFav = when (kind) { "song" -> favSongs; "album" -> favAlbums; else -> favArtists }.contains(id)
     val isDis = when (kind) { "song" -> disSongs; "album" -> disAlbums; else -> disArtists }.contains(id)
 
+    val sz = if (compact) 32.dp else 40.dp
     Row {
-        IconButton(onClick = { vm.toggleFavorite(kind, id) }, modifier = Modifier.size(if (compact) 32.dp else 40.dp)) {
+        IconButton(onClick = { vm.toggleFavorite(kind, id) }, modifier = Modifier.size(sz)) {
             Icon(
-                if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = "Favorite",
-                tint = if (isFav) MagAccent else MagSecondary,
+                painterResource(if (isFav) R.drawable.ic_heart_solid else R.drawable.ic_heart_light),
+                contentDescription = "Favorite", tint = if (isFav) MagAccent else MagSecondary,
+                modifier = Modifier.size(20.dp),
             )
         }
-        IconButton(onClick = { vm.toggleDislike(kind, id) }, modifier = Modifier.size(if (compact) 32.dp else 40.dp)) {
+        IconButton(onClick = { vm.toggleDislike(kind, id) }, modifier = Modifier.size(sz)) {
             Icon(
-                if (isDis) Icons.Filled.HeartBroken else Icons.Outlined.HeartBroken,
-                contentDescription = "Dislike",
-                tint = if (isDis) MagAccent else MagSecondary,
+                painterResource(if (isDis) R.drawable.ic_dislike_solid else R.drawable.ic_dislike_light),
+                contentDescription = "Dislike", tint = if (isDis) MagAccent else MagSecondary,
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -112,23 +113,40 @@ fun SongRow(
     artistName: String? = null,
     albumName: String? = null,
     showArtwork: Boolean = false,
+    isCurrent: Boolean = false,
+    isPlaying: Boolean = false,
     onClick: () -> Unit,
     trailing: @Composable () -> Unit = {},
 ) {
+    val rowBg = if (isCurrent) MagAccent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(rowBg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showArtwork && artistName != null && albumName != null) {
+        if (isCurrent) {
+            Box(Modifier.size(if (showArtwork) 40.dp else 26.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    if (isPlaying) Icons.Filled.VolumeUp else Icons.Filled.VolumeMute,
+                    contentDescription = "Now playing", tint = MagAccent, modifier = Modifier.size(20.dp),
+                )
+            }
+        } else if (showArtwork && artistName != null && albumName != null) {
             CoverImage(artistName, albumName, points = 40.dp, modifier = Modifier.size(40.dp))
         } else {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(if (showArtwork) 40.dp else 26.dp), contentAlignment = Alignment.Center) {
                 Text(song.trackNo?.toString() ?: "•", style = MaterialTheme.typography.bodyMedium, color = MagSecondary)
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(song.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(song.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isCurrent) MagAccent else MaterialTheme.colorScheme.onBackground)
             if (artistName != null) {
                 Text(artistName, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)

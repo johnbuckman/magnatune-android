@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.magnatune.player.model.Album
 import com.magnatune.player.model.Artist
@@ -65,28 +67,34 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
     val (album, artistName, songs) = d
     val tracks by produceState(emptyList<PlayableTrack>(), albumId) { value = vm.playableForAlbum(albumId) }
 
+    val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
+    val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
+    val albumNowPlaying = current?.album?.id == album.id
+
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                CoverImage(artistName, album.name, points = 240.dp, modifier = Modifier.size(240.dp), cap = 600)
-                Spacer(Modifier.height(12.dp))
-                Text(album.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary,
-                    modifier = Modifier.padding(top = 2.dp).fillMaxWidth().clickableNav { nav.navigate(Routes.artist(album.artistId)) })
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { onPlay(tracks, 0) }) {
-                        Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play")
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    CoverImage(artistName, album.name, points = 160.dp, modifier = Modifier.size(160.dp), cap = 600)
+                    Spacer(Modifier.size(16.dp))
+                    Column {
+                        Text(album.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary,
+                            modifier = Modifier.padding(top = 2.dp).clickableNav { nav.navigate(Routes.artist(album.artistId)) })
+                        Row(modifier = Modifier.padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PlayButton(albumNowPlaying && playing) { onPlay(tracks, 0) }
+                            Button(onClick = { vm.settings.setShuffle(true); onPlay(tracks, 0) }) {
+                                Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.size(4.dp)); Text("Shuffle")
+                            }
+                            FavoriteButton(vm, "album", album.id)
+                            com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
+                            com.magnatune.player.ui.components.AlbumDownloadButton(vm, album.sku)
+                        }
                     }
-                    Button(onClick = { vm.settings.setShuffle(true); onPlay(tracks, 0) }) {
-                        Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.size(4.dp)); Text("Shuffle")
-                    }
-                    FavoriteButton(vm, "album", album.id)
-                    com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
-                    com.magnatune.player.ui.components.AlbumDownloadButton(vm, album.sku)
                 }
                 chips?.let { (genres, tags) ->
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         genres.forEach { g -> Chip(g.name) { nav.navigate(Routes.genre(g.id)) } }
                         tags.forEach { t -> Chip(t.name) { nav.navigate(Routes.tag(t.id)) } }
@@ -99,13 +107,24 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
             HorizontalDivider()
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
-            SongRow(song = song, onClick = { onPlay(tracks, idx) },
+            SongRow(song = song, isCurrent = current?.id == song.id, isPlaying = playing,
+                onClick = { onPlay(tracks, idx) },
                 trailing = {
                     tracks.getOrNull(idx)?.let { com.magnatune.player.ui.components.SongDownloadButton(vm, it) }
                     com.magnatune.player.ui.components.AddToPlaylistButton(vm, "song", song.id, compact = true)
                     FavoriteButton(vm, "song", song.id, compact = true)
                 })
         }
+    }
+}
+
+/** Play button that flips to "Now Playing" with a speaker icon while this list is playing. */
+@Composable
+private fun PlayButton(nowPlaying: Boolean, onClick: () -> Unit) {
+    Button(onClick = onClick) {
+        Icon(if (nowPlaying) Icons.AutoMirrored.Filled.VolumeUp else Icons.Filled.PlayArrow, null)
+        Spacer(Modifier.size(4.dp))
+        Text(if (nowPlaying) "Now Playing" else "Play")
     }
 }
 
@@ -116,19 +135,25 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
     val albums by produceState(emptyList<Album>(), artistId) { value = vm.albumsForArtist(artistId) }
     val artistTracks by produceState(emptyList<PlayableTrack>(), artistId) { value = vm.playableForArtist(artistId) }
     val a = artist ?: run { CenterLoading(); return }
+    val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
+    val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
+    val artistNowPlaying = current?.album?.artistId == artistId
 
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                com.magnatune.player.ui.components.ArtistPhoto(a.name, firstAlbum, a.photo, points = 160.dp)
-                Spacer(Modifier.height(12.dp))
-                Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { onPlay(artistTracks, 0) }) {
-                        Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play all")
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    com.magnatune.player.ui.components.ArtistPhoto(a.name, firstAlbum, a.photo, points = 120.dp)
+                    Spacer(Modifier.size(16.dp))
+                    Column {
+                        Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Row(modifier = Modifier.padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PlayButton(artistNowPlaying && playing) { onPlay(artistTracks, 0) }
+                            FavoriteButton(vm, "artist", a.id)
+                            com.magnatune.player.ui.components.AddToPlaylistButton(vm, "artist", a.id)
+                        }
                     }
-                    FavoriteButton(vm, "artist", a.id)
                 }
                 (a.bio ?: a.description)?.takeIf { it.isNotBlank() }?.let {
                     com.magnatune.player.ui.components.ExpandableText(it, modifier = Modifier.padding(top = 12.dp))

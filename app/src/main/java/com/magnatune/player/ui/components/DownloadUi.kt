@@ -28,7 +28,10 @@ fun AlbumDownloadButton(vm: MagnatuneViewModel, sku: String) {
     IconButton(onClick = {
         val url = UrlBuilder.albumMembershipDownloadUrl(sku, vm.settings.albumDownloadFormat.key)
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    }) { Icon(Icons.Filled.Download, "Download album", tint = MagSecondary) }
+    }) {
+        Icon(androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.ic_download),
+            "Download album", tint = MagSecondary, modifier = Modifier.size(20.dp))
+    }
 }
 
 /** Member-only single-song download — opens the open he3 per-track file in the browser. */
@@ -40,5 +43,8 @@ fun SongDownloadButton(vm: MagnatuneViewModel, track: PlayableTrack) {
     IconButton(onClick = {
         val url = UrlBuilder.songDownloadUrl(track.artistName, track.album.name, track.song, vm.settings.songDownloadFormat)
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Download, "Download song", tint = MagSecondary) }
+    }, modifier = Modifier.size(32.dp)) {
+        Icon(androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.ic_download),
+            "Download song", tint = MagSecondary, modifier = Modifier.size(18.dp))
+    }
 }

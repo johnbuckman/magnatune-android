@@ -131,7 +131,8 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     }
     fun logout() = credentials.clear()
 
-    // ---- downloads / offline ----
+    // ---- playback / downloads / offline ----
+    val playback get() = container.playback
     val downloads get() = container.downloads
     val isOnline get() = container.isOnline
     fun clearDownloads() = viewModelScope.launch { container.downloads.clearAll() }

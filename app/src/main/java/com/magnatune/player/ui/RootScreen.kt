@@ -1,12 +1,17 @@
 package com.magnatune.player.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -92,18 +97,55 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
     Surface(color = MagCard, modifier = modifier) {
-        androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
-            Text("Magnatune", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(12.dp))
-            NavTab.entries.forEach { tab ->
-                NavigationDrawerItem(
-                    label = { Text(tab.title) },
-                    icon = { Icon(iconFor(tab), null) },
-                    selected = current == tab.route,
-                    onClick = { nav.navigate(tab.route) { popUpTo(Routes.POPULAR); launchSingleTop = true } },
-                    modifier = Modifier.padding(vertical = 2.dp),
-                )
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight().padding(8.dp)) {
+            // Wordmark logo (top-left).
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_logo),
+                contentDescription = "Magnatune",
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                alignment = androidx.compose.ui.Alignment.CenterStart,
+                modifier = Modifier.fillMaxWidth().height(40.dp).padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
+            )
+            androidx.compose.foundation.layout.Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            ) {
+                NavTab.entries.filter { it != NavTab.SETTINGS }.forEach { tab ->
+                    NavRow(tab, current == tab.route) {
+                        nav.navigate(tab.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                    }
+                }
+            }
+            // Mascot above Settings.
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
+                contentDescription = null,
+                modifier = Modifier.size(56.dp).align(androidx.compose.ui.Alignment.CenterHorizontally)
+                    .padding(vertical = 4.dp),
+            )
+            NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
+                nav.navigate(NavTab.SETTINGS.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
             }
         }
+    }
+}
+
+@Composable
+private fun NavRow(tab: NavTab, selected: Boolean, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .background(if (selected) com.magnatune.player.ui.theme.MagAccent.copy(alpha = 0.14f)
+                       else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Icon(iconFor(tab), null, tint = if (selected) com.magnatune.player.ui.theme.MagAccent
+            else com.magnatune.player.ui.theme.MagSecondary, modifier = Modifier.size(20.dp))
+        androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
+        Text(tab.title, style = MaterialTheme.typography.bodyMedium,
+            color = if (selected) com.magnatune.player.ui.theme.MagAccent else MaterialTheme.colorScheme.onBackground)
     }
 }
 
