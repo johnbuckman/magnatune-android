@@ -94,12 +94,11 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
                 Text(t?.artistName ?: "Magnatune", style = MaterialTheme.typography.bodySmall,
                     color = MagSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // Inline volume (tablet).
+            // Inline volume (tablet) — short thumb, shifted ~20px left of the transport buttons.
             Icon(volumeIcon(vol), null, tint = MagSecondary, modifier = Modifier.size(18.dp))
-            Slider(value = vol, onValueChange = { controller.setVolume(it) },
-                modifier = Modifier.width(90.dp).padding(horizontal = 4.dp),
-                colors = accentSlider())
-            Spacer(Modifier.width(4.dp))
+            SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                modifier = Modifier.width(90.dp).padding(horizontal = 4.dp))
+            Spacer(Modifier.width(24.dp))
             TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
             Spacer(Modifier.width(6.dp))
             TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", t != null) { controller.togglePlayPause() }
@@ -139,12 +138,13 @@ private fun accentSlider() = SliderDefaults.colors(
     inactiveTrackColor = MagSecondary.copy(alpha = 0.25f),
 )
 
-/** Seek slider with a short thumb (the play-position bar, 50% shorter than the default M3 thumb). */
+/** Slider with a short thumb (50% shorter than the default M3 thumb) — used for both the
+ *  play-position bar and the volume control. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun SeekSlider(
     value: Float, enabled: Boolean,
-    onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit,
+    onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -251,8 +251,8 @@ private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(volumeIcon(vol), null, tint = MagSecondary, modifier = Modifier.size(20.dp))
-                    Slider(value = vol, onValueChange = { controller.setVolume(it) },
-                        modifier = Modifier.padding(start = 8.dp), colors = accentSlider())
+                    SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp))
                 }
             }
         }

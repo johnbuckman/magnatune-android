@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -123,14 +124,16 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // Mascot above Settings: wide (1000x392), centered, with its left/right edges clipped to
             // the column — matches iOS.
             Box(
-                Modifier.fillMaxWidth().height(120.dp).clipToBounds(),
-                contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
+                Modifier.fillMaxWidth().height(200.dp)
+                    .offset(y = 20.dp)
+                    .clipToBounds(),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(120.dp).width(306.dp),
+                    modifier = Modifier.height(240.dp).width(612.dp),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
