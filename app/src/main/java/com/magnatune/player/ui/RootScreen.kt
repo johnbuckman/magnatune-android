@@ -69,17 +69,17 @@ import com.magnatune.player.ui.screens.TagDetailScreen
 import com.magnatune.player.ui.screens.TagsScreen
 import com.magnatune.player.ui.theme.MagCard
 
-private fun iconFor(tab: NavTab): ImageVector = when (tab) {
-    NavTab.POPULAR -> Icons.Filled.Star
-    NavTab.ARTISTS -> Icons.Filled.Person
-    NavTab.ALBUMS -> Icons.Filled.Album
-    NavTab.GENRES -> Icons.Filled.Category
-    NavTab.TAGS -> Icons.Filled.Tag
-    NavTab.FEATURED -> Icons.AutoMirrored.Filled.QueueMusic
-    NavTab.SEARCH -> Icons.Filled.Search
-    NavTab.FAVORITES -> Icons.Filled.Favorite
-    NavTab.PLAYLISTS -> Icons.Filled.PlaylistPlay
-    NavTab.SETTINGS -> Icons.Filled.Settings
+private fun iconFor(tab: NavTab): String = when (tab) {
+    NavTab.POPULAR -> com.magnatune.player.ui.components.Fa.star
+    NavTab.ARTISTS -> com.magnatune.player.ui.components.Fa.user
+    NavTab.ALBUMS -> com.magnatune.player.ui.components.Fa.compactDisc
+    NavTab.GENRES -> com.magnatune.player.ui.components.Fa.guitar
+    NavTab.TAGS -> com.magnatune.player.ui.components.Fa.tag
+    NavTab.FEATURED -> com.magnatune.player.ui.components.Fa.rectangleList
+    NavTab.SEARCH -> com.magnatune.player.ui.components.Fa.magnifyingGlass
+    NavTab.FAVORITES -> com.magnatune.player.ui.components.Fa.heart
+    NavTab.PLAYLISTS -> com.magnatune.player.ui.components.Fa.listUl
+    NavTab.SETTINGS -> com.magnatune.player.ui.components.Fa.gear
 }
 
 @Composable
@@ -132,8 +132,8 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(280.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.height(480.dp).width(1224.dp),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
@@ -155,8 +155,9 @@ private fun NavRow(tab: NavTab, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
-        Icon(iconFor(tab), null, tint = if (selected) com.magnatune.player.ui.theme.MagAccent
-            else com.magnatune.player.ui.theme.MagSecondary, modifier = Modifier.size(20.dp))
+        com.magnatune.player.ui.components.FaIcon(iconFor(tab), null,
+            tint = if (selected) com.magnatune.player.ui.theme.MagAccent else com.magnatune.player.ui.theme.MagSecondary,
+            size = 18.dp)
         androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
         Text(tab.title, style = MaterialTheme.typography.bodyMedium,
             color = if (selected) com.magnatune.player.ui.theme.MagAccent else MaterialTheme.colorScheme.onBackground)
@@ -178,9 +179,9 @@ private fun ContentTopBar(nav: NavController) {
             .padding(start = 8.dp, end = 8.dp, top = 36.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBackIos, "Back",
-            tint = com.magnatune.player.ui.theme.MagAccent, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(2.dp))
+        com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.chevronLeft, "Back",
+            tint = com.magnatune.player.ui.theme.MagAccent, size = 16.dp)
+        Spacer(Modifier.width(4.dp))
         Text("Back", style = MaterialTheme.typography.bodyLarge, color = com.magnatune.player.ui.theme.MagAccent)
     }
 }

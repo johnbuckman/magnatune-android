@@ -130,10 +130,7 @@ fun SongRow(
     ) {
         if (isCurrent) {
             Box(Modifier.size(if (showArtwork) 40.dp else 26.dp), contentAlignment = Alignment.Center) {
-                Icon(
-                    if (isPlaying) Icons.Filled.VolumeUp else Icons.Filled.VolumeMute,
-                    contentDescription = "Now playing", tint = MagAccent, modifier = Modifier.size(20.dp),
-                )
+                FaIcon(if (isPlaying) Fa.volumeHigh else Fa.volumeLow, "Now playing", tint = MagAccent, size = 20.dp)
             }
         } else if (showArtwork && artistName != null && albumName != null) {
             CoverImage(artistName, albumName, points = 40.dp, modifier = Modifier.size(40.dp))

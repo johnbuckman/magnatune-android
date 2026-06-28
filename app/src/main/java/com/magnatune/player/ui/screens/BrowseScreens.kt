@@ -92,19 +92,19 @@ fun ArtistsScreen(vm: MagnatuneViewModel, nav: NavController) {
     }
 }
 
-/** Per-genre icon, mirroring the iOS genreIcon() SF Symbol mapping. */
-fun genreIcon(name: String): androidx.compose.ui.graphics.vector.ImageVector = when (name) {
-    "Classical" -> Icons.Filled.Piano
-    "New Age" -> Icons.Filled.NightsStay
-    "Electronica" -> Icons.Filled.GraphicEq
-    "World" -> Icons.Filled.Public
-    "Ambient" -> Icons.Filled.Air
-    "Jazz" -> Icons.Filled.MusicNote
-    "Hip Hop" -> Icons.Filled.Mic
-    "Alt Rock" -> Icons.Filled.LibraryMusic
-    "Electro Rock" -> Icons.Filled.Bolt
-    "Hard Rock" -> Icons.Filled.Whatshot
-    else -> Icons.Filled.MusicNote
+/** Per-genre Font Awesome glyph, mirroring the iOS genreIcon() SF Symbol mapping. */
+fun genreIcon(name: String): String = when (name) {
+    "Classical" -> com.magnatune.player.ui.components.Fa.music
+    "New Age" -> com.magnatune.player.ui.components.Fa.moon
+    "Electronica" -> com.magnatune.player.ui.components.Fa.waveSquare
+    "World" -> com.magnatune.player.ui.components.Fa.globe
+    "Ambient" -> com.magnatune.player.ui.components.Fa.wind
+    "Jazz" -> com.magnatune.player.ui.components.Fa.music
+    "Hip Hop" -> com.magnatune.player.ui.components.Fa.microphone
+    "Alt Rock" -> com.magnatune.player.ui.components.Fa.guitar
+    "Electro Rock" -> com.magnatune.player.ui.components.Fa.bolt
+    "Hard Rock" -> com.magnatune.player.ui.components.Fa.fire
+    else -> com.magnatune.player.ui.components.Fa.music
 }
 
 @Composable
@@ -115,7 +115,8 @@ fun GenresScreen(vm: MagnatuneViewModel, nav: NavController) {
             ListItem(
                 headlineContent = { Text(genre.name) },
                 leadingContent = {
-                    Icon(genreIcon(genre.name), null, tint = com.magnatune.player.ui.theme.MagAccent)
+                    com.magnatune.player.ui.components.FaIcon(genreIcon(genre.name), null,
+                        tint = com.magnatune.player.ui.theme.MagAccent, size = 20.dp)
                 },
                 modifier = Modifier.clickableRow { nav.navigate(Routes.genre(genre.id)) },
             )

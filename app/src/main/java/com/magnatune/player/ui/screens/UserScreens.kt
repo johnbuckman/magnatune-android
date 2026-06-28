@@ -105,7 +105,7 @@ fun PlaylistsScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
                 headlineContent = { Text(pl.name) },
                 supportingContent = { Text("${pl.count} song${if (pl.count == 1) "" else "s"}") },
                 trailingContent = {
-                    IconButton(onClick = { vm.deletePlaylist(pl.id) }) { Icon(Icons.Filled.Delete, "Delete") }
+                    IconButton(onClick = { vm.deletePlaylist(pl.id) }) { com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.trash, "Delete", size = 20.dp) }
                 },
                 modifier = Modifier.clickable { nav.navigate(Routes.userPlaylist(pl.id)) },
             )
@@ -125,7 +125,7 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
             androidx.compose.material3.Button(
                 onClick = { if (tracks.isNotEmpty()) onPlay(tracks, 0) },
                 modifier = Modifier.padding(16.dp),
-            ) { Icon(Icons.Filled.PlayArrow, null); Text("  Play all") }
+            ) { com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 16.dp); Text("  Play all") }
             HorizontalDivider()
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
@@ -134,7 +134,7 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
                 onClick = { if (tracks.isNotEmpty()) onPlay(tracks, idx) },
                 trailing = {
                     IconButton(onClick = { vm.removeFromPlaylist(song.id, playlistId) }) {
-                        Icon(Icons.Filled.Delete, "Remove", modifier = Modifier.size(20.dp))
+                        com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.trash, "Remove", size = 18.dp)
                     }
                 })
         }

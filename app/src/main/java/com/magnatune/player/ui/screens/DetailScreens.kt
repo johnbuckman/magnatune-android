@@ -84,7 +84,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(albumNowPlaying && playing) { onPlay(tracks, 0) }
                             Button(onClick = { vm.settings.setShuffle(true); onPlay(tracks, 0) }) {
-                                Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.size(4.dp)); Text("Shuffle")
+                                com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.shuffle, null, size = 18.dp); Spacer(Modifier.size(4.dp)); Text("Shuffle")
                             }
                             FavoriteButton(vm, "album", album.id)
                             com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
@@ -121,7 +121,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
 @Composable
 private fun PlayButton(nowPlaying: Boolean, onClick: () -> Unit) {
     Button(onClick = onClick) {
-        Icon(if (nowPlaying) Icons.AutoMirrored.Filled.VolumeUp else Icons.Filled.PlayArrow, null)
+        com.magnatune.player.ui.components.FaIcon(if (nowPlaying) com.magnatune.player.ui.components.Fa.volumeHigh else com.magnatune.player.ui.components.Fa.play, null, size = 18.dp)
         Spacer(Modifier.size(4.dp))
         Text(if (nowPlaying) "Now Playing" else "Play")
     }
@@ -187,7 +187,7 @@ fun CatalogPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, play
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Button(onClick = { onPlay(tracks, 0) }, modifier = Modifier.padding(16.dp)) {
-                Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play all")
+                com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 16.dp); Spacer(Modifier.size(4.dp)); Text("Play all")
             }
             HorizontalDivider()
         }

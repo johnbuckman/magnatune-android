@@ -109,6 +109,6 @@ private fun AirPlayRow(name: String, isSelected: Boolean, onClick: () -> Unit) {
         Text(name, style = MaterialTheme.typography.bodyLarge,
             color = if (isSelected) MagAccent else MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (isSelected) Icon(Icons.Filled.Check, "Selected", tint = MagAccent, modifier = Modifier.size(20.dp))
+        if (isSelected) FaIcon(Fa.check, "Selected", tint = MagAccent, size = 18.dp)
     }
 }

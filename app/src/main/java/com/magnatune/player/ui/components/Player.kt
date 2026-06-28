@@ -84,7 +84,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
                 Box(Modifier.size(44.dp).clip(RoundedCornerShape(6.dp))
                     .border(0.5.dp, MagSecondary.copy(alpha = 0.3f), RoundedCornerShape(6.dp)),
                     contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.MusicNote, null, tint = MagSecondary, modifier = Modifier.size(20.dp))
+                    FaIcon(Fa.music, null, tint = MagSecondary, size = 20.dp)
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -97,22 +97,22 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
             }
             // Inline volume (tablet) — no-sound icon left, full-sound icon right; short thumb,
             // shifted ~20px left of the transport buttons. Icons tap to mute / max.
-            Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
-                modifier = Modifier.size(18.dp).clickable { controller.setVolume(0f) })
+            FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(0f) })
             SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
                 modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
-            Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
-                modifier = Modifier.size(18.dp).clickable { controller.setVolume(1f) })
+            FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 18.dp,
+                modifier = Modifier.clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
             AirPlayButton(vm)
             Spacer(Modifier.width(8.dp))
             CastButton(Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
-            TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
+            TransportButton(Fa.prev, "Previous", t != null) { controller.previous() }
             Spacer(Modifier.width(6.dp))
-            TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", t != null) { controller.togglePlayPause() }
+            TransportButton(if (playing) Fa.pause else Fa.play, "Play/Pause", t != null) { controller.togglePlayPause() }
             Spacer(Modifier.width(6.dp))
-            TransportButton(Icons.Filled.FastForward, "Next", t != null) { controller.next() }
+            TransportButton(Fa.next, "Next", t != null) { controller.next() }
         }
         // Seek row.
         Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -133,9 +133,12 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
 
 @Composable
 private fun Card(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    // Alignment mirrors the iOS regularLayout fix: bottom-align the player card with the sidebar
+    // card (both 8dp bottom inset) and make the left gutter equal the bottom gutter (8dp), keeping
+    // the right gutter (10dp).
     Surface(
         color = MagCard, shape = RoundedCornerShape(12.dp), shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 8.dp),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), content = content)
     }
@@ -169,16 +172,10 @@ private fun SeekSlider(
     )
 }
 
-private fun volumeIcon(v: Float): ImageVector = when {
-    v < 0.01f -> Icons.AutoMirrored.Filled.VolumeOff
-    v < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
-    else -> Icons.AutoMirrored.Filled.VolumeUp
-}
-
-/** Accent-outlined transport button (matches iOS). */
+/** Accent-outlined transport button (matches iOS), Font Awesome glyph. */
 @Composable
 private fun TransportButton(
-    icon: ImageVector, desc: String, enabled: Boolean,
+    glyph: String, desc: String, enabled: Boolean,
     width: Dp = 48.dp, height: Dp = 28.dp, iconSize: Dp = 18.dp,
     onClick: () -> Unit,
 ) {
@@ -189,7 +186,7 @@ private fun TransportButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, desc, tint = if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), modifier = Modifier.size(iconSize))
+        FaIcon(glyph, desc, tint = if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), size = iconSize)
     }
 }
 
@@ -212,12 +209,12 @@ private fun RemoteControlBar(
                 Text(songName ?: "Playing…", style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            TransportButton(Icons.Filled.FastRewind, "Previous", true) { vm.container.peer.sendControl(peer.id, "prev") }
+            TransportButton(Fa.prev, "Previous", true) { vm.container.peer.sendControl(peer.id, "prev") }
             Spacer(Modifier.width(6.dp))
-            TransportButton(if (peer.snapshot.state == "playing") Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            TransportButton(if (peer.snapshot.state == "playing") Fa.pause else Fa.play,
                 "Play/Pause", true) { vm.container.peer.sendControl(peer.id, "playPause") }
             Spacer(Modifier.width(6.dp))
-            TransportButton(Icons.Filled.FastForward, "Next", true) { vm.container.peer.sendControl(peer.id, "next") }
+            TransportButton(Fa.next, "Next", true) { vm.container.peer.sendControl(peer.id, "next") }
         }
     }
 }
@@ -276,19 +273,19 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                     }
                     Spacer(Modifier.size(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        TransportButton(Icons.Filled.FastRewind, "Previous", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.previous() }
-                        TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", true, width = 80.dp, height = 44.dp, iconSize = 28.dp) { controller.togglePlayPause() }
-                        TransportButton(Icons.Filled.FastForward, "Next", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
+                        TransportButton(Fa.prev, "Previous", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.previous() }
+                        TransportButton(if (playing) Fa.pause else Fa.play, "Play/Pause", true, width = 80.dp, height = 44.dp, iconSize = 28.dp) { controller.togglePlayPause() }
+                        TransportButton(Fa.next, "Next", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
                     }
                     Spacer(Modifier.size(14.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center) {
-                        Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
-                            modifier = Modifier.size(20.dp).clickable { controller.setVolume(0f) })
+                        FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 20.dp,
+                            modifier = Modifier.clickable { controller.setVolume(0f) })
                         SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
                             modifier = Modifier.width(140.dp).padding(horizontal = 10.dp))
-                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
-                            modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
+                        FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 20.dp,
+                            modifier = Modifier.clickable { controller.setVolume(1f) })
                     }
                 }
                 // AirPlay + Cast buttons overlaid top-left (mirror the X); each hidden when no
@@ -300,7 +297,7 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                 }
                 // Close button overlaid in the top-right corner (~10dp from edges).
                 IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(28.dp)) {
-                    Icon(Icons.Filled.Close, "Close", tint = MagSecondary)
+                    FaIcon(Fa.xmark, "Close", tint = MagSecondary, size = 18.dp)
                 }
             }
         }
