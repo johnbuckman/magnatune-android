@@ -83,14 +83,14 @@ private fun iconFor(tab: NavTab): ImageVector = when (tab) {
 }
 
 @Composable
-fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable () -> Unit = {}) {
+fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (NavController) -> Unit = {}) {
     val nav = rememberNavController()
     Row(Modifier.fillMaxSize()) {
         NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
             ContentTopBar(nav)
             MainNav(vm, nav, onPlay, Modifier.weight(1f))
-            miniPlayer()
+            miniPlayer(nav)
         }
     }
 }

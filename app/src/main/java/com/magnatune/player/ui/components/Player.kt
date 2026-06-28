@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magnatune.player.service.PlaybackController
@@ -59,7 +60,7 @@ private fun fmt(ms: Long): String {
  *  accent-bordered transport buttons, and a seek row. Always visible; shows a remote-control bar
  *  when a peer is playing while we're idle, or a "Not Playing" placeholder otherwise. */
 @Composable
-fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
+fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.navigation.NavController) {
     val controller = vm.playback
     val track by controller.currentTrack.collectAsStateWithLifecycle()
     val playing by controller.isPlaying.collectAsStateWithLifecycle()
@@ -123,7 +124,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
         }
     }
 
-    if (showNowPlaying && t != null) NowPlayingDialog(controller) { showNowPlaying = false }
+    if (showNowPlaying && t != null) NowPlayingDialog(controller, nav) { showNowPlaying = false }
 }
 
 @Composable
@@ -172,15 +173,19 @@ private fun volumeIcon(v: Float): ImageVector = when {
 
 /** Accent-outlined transport button (matches iOS). */
 @Composable
-private fun TransportButton(icon: ImageVector, desc: String, enabled: Boolean, onClick: () -> Unit) {
+private fun TransportButton(
+    icon: ImageVector, desc: String, enabled: Boolean,
+    width: Dp = 48.dp, height: Dp = 28.dp, iconSize: Dp = 18.dp,
+    onClick: () -> Unit,
+) {
     Box(
-        Modifier.height(28.dp).width(48.dp)
-            .clip(RoundedCornerShape(7.dp))
-            .border(1.dp, if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), RoundedCornerShape(7.dp))
+        Modifier.height(height).width(width)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, desc, tint = if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        Icon(icon, desc, tint = if (enabled) MagAccent else MagSecondary.copy(alpha = 0.4f), modifier = Modifier.size(iconSize))
     }
 }
 
@@ -214,7 +219,7 @@ private fun RemoteControlBar(
 }
 
 @Composable
-private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit) {
+private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navigation.NavController, onClose: () -> Unit) {
     val track by controller.currentTrack.collectAsStateWithLifecycle()
     val playing by controller.isPlaying.collectAsStateWithLifecycle()
     val pos by controller.positionMs.collectAsStateWithLifecycle()
@@ -223,43 +228,67 @@ private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit
     val t = track ?: return
     var scrubbing by remember { mutableStateOf<Float?>(null) }
 
+    fun openAlbum() { onClose(); nav.navigate(com.magnatune.player.ui.Routes.album(t.album.id)) }
+    fun openArtist() { onClose(); nav.navigate(com.magnatune.player.ui.Routes.artist(t.album.artistId)) }
+
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.padding(20.dp).width(320.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Close") }
-                }
-                CoverImage(t.artistName, t.album.name, points = 260.dp, modifier = Modifier.size(260.dp), cap = 600)
-                Spacer(Modifier.size(16.dp))
-                Text(t.song.name, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(t.artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary)
-                Spacer(Modifier.size(16.dp))
-                SeekSlider(
-                    value = (scrubbing ?: (if (dur > 0) pos.toFloat() / dur else 0f)).coerceIn(0f, 1f),
-                    enabled = true,
-                    onValueChange = { scrubbing = it },
-                    onValueChangeFinished = { scrubbing?.let { controller.seekTo((it * dur).toLong()) }; scrubbing = null },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(fmt(pos), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
-                    Text(fmt(dur), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
-                }
-                Spacer(Modifier.size(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(onClick = { controller.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous") }
-                    IconButton(onClick = { controller.togglePlayPause() }) {
-                        Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", modifier = Modifier.size(48.dp))
+            Box(Modifier.width(340.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CoverImage(t.artistName, t.album.name, points = 200.dp,
+                        modifier = Modifier.size(200.dp).clickable { openAlbum() }, cap = 600)
+                    Spacer(Modifier.size(12.dp))
+                    Text(t.song.name, style = MaterialTheme.typography.titleLarge, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().clickable { openAlbum() }
+                            .padding(vertical = 2.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(Modifier.size(4.dp))
+                    Text(t.artistName, style = MaterialTheme.typography.titleMedium, color = MagAccent,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().clickable { openArtist() }
+                            .padding(vertical = 4.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(Modifier.size(4.dp))
+                    Text(t.album.name, style = MaterialTheme.typography.bodyMedium, color = MagSecondary,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().clickable { openAlbum() }
+                            .padding(vertical = 2.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(Modifier.size(12.dp))
+                    SeekSlider(
+                        value = (scrubbing ?: (if (dur > 0) pos.toFloat() / dur else 0f)).coerceIn(0f, 1f),
+                        enabled = true,
+                        onValueChange = { scrubbing = it },
+                        onValueChangeFinished = { scrubbing?.let { controller.seekTo((it * dur).toLong()) }; scrubbing = null },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(fmt(pos), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
+                        Text(fmt(dur), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
                     }
-                    IconButton(onClick = { controller.next() }) { Icon(Icons.Filled.SkipNext, "Next") }
+                    Spacer(Modifier.size(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        TransportButton(Icons.Filled.FastRewind, "Previous", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.previous() }
+                        TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", true, width = 80.dp, height = 44.dp, iconSize = 28.dp) { controller.togglePlayPause() }
+                        TransportButton(Icons.Filled.FastForward, "Next", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
+                    }
+                    Spacer(Modifier.size(14.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
+                            modifier = Modifier.size(20.dp).clickable { controller.setVolume(0f) })
+                        SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                            modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
+                            modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
+                    }
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
-                        modifier = Modifier.size(20.dp).clickable { controller.setVolume(0f) })
-                    SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-                    Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
-                        modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
+                // Close button overlaid in the top-right corner (~10dp from edges).
+                IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(28.dp)) {
+                    Icon(Icons.Filled.Close, "Close", tint = MagSecondary)
                 }
             }
         }

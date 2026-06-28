@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
                 RootScreen(
                     vm = vm,
                     onPlay = { tracks, startAt -> container.playback.play(tracks, startAt) },
-                    miniPlayer = { MiniPlayer(vm) },
+                    miniPlayer = { navController -> MiniPlayer(vm, navController) },
                 )
             }
         }
