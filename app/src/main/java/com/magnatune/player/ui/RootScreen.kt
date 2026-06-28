@@ -172,7 +172,7 @@ private fun ContentTopBar(nav: NavController) {
         Modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .clickable { nav.popBackStack() }
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(start = 8.dp, end = 8.dp, top = 36.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.AutoMirrored.Filled.ArrowBackIos, "Back",
