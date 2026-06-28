@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -125,10 +126,12 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // the column — matches iOS.
             // Mascot: filled to the specified HEIGHT (the box height); since the image is far wider
             // than the narrow sidebar, Crop scales it by height and truncates the left/right sides
-            // (centered). The height is shown in full — never cropped top/bottom.
+            // (centered). The height is shown in full — never cropped top/bottom. `fullBleedWidth`
+            // expands it past the Column's 8dp horizontal padding so it truncates right at the card
+            // edges instead of a few px short.
             val mascotH = 150.dp
             Box(
-                Modifier.fillMaxWidth().height(mascotH).offset(y = 10.dp).clipToBounds(),
+                Modifier.fillMaxWidth().fullBleedWidth(8.dp).height(mascotH).offset(y = 10.dp).clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
                 androidx.compose.foundation.Image(
@@ -211,6 +214,16 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
         }
     }
 }
+
+/** Expands a child by [eachSide] on the left and right (and re-centers it) so it bleeds past the
+ *  parent's horizontal padding, while still reporting the original width to the layout. */
+private fun Modifier.fullBleedWidth(eachSide: androidx.compose.ui.unit.Dp): Modifier =
+    this.layout { measurable, constraints ->
+        val extra = eachSide.roundToPx()
+        val newMax = (constraints.maxWidth + extra * 2).coerceAtLeast(0)
+        val placeable = measurable.measure(constraints.copy(minWidth = newMax, maxWidth = newMax))
+        layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
+    }
 
 /** composable() helper for a route with a single Long {id} arg. */
 private fun NavGraphBuilder.longArg(route: String, content: @Composable (Long) -> Unit) {
