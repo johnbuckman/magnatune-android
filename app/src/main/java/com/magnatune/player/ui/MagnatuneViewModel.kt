@@ -123,6 +123,22 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
         }
     }
 
+    // ---- membership ----
+    fun login(username: String, password: String, onResult: (Boolean) -> Unit) = viewModelScope.launch {
+        val ok = com.magnatune.player.data.Credentials.verify(username, password)
+        if (ok) credentials.save(username, password)
+        onResult(ok)
+    }
+    fun logout() = credentials.clear()
+
+    // ---- catalog status ----
+    suspend fun catalogUpdateAvailable() = container.catalogSync.updateAvailable()
+    fun refreshCatalog(onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        val updated = container.catalogSync.refreshIfNeeded(force = true)
+        if (updated) container.reopenCatalog()
+        onDone(updated)
+    }
+
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = MagnatuneViewModel(container) as T

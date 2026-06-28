@@ -82,6 +82,8 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                         Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.size(4.dp)); Text("Shuffle")
                     }
                     FavoriteButton(vm, "album", album.id)
+                    com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
+                    com.magnatune.player.ui.components.AlbumDownloadButton(vm, album.sku)
                 }
                 chips?.let { (genres, tags) ->
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
@@ -100,6 +102,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
             SongRow(song = song, onClick = { onPlay(tracks, idx) },
                 trailing = {
+                    tracks.getOrNull(idx)?.let { com.magnatune.player.ui.components.SongDownloadButton(vm, it) }
                     com.magnatune.player.ui.components.AddToPlaylistButton(vm, "song", song.id, compact = true)
                     FavoriteButton(vm, "song", song.id, compact = true)
                 })
