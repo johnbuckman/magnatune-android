@@ -168,7 +168,7 @@ private fun SeekSlider(
         thumb = {
             SliderDefaults.Thumb(
                 interactionSource = interaction,
-                colors = SliderDefaults.colors(thumbColor = MagAccent.copy(alpha = 0.5f)),
+                colors = accentSlider(),
                 enabled = enabled,
                 thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
             )
