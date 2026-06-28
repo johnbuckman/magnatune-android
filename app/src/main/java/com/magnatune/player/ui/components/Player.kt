@@ -277,11 +277,12 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                         TransportButton(Icons.Filled.FastForward, "Next", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
                     }
                     Spacer(Modifier.size(14.dp))
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center) {
                         Icon(Icons.AutoMirrored.Filled.VolumeOff, "Mute", tint = MagSecondary,
                             modifier = Modifier.size(20.dp).clickable { controller.setVolume(0f) })
                         SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                            modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+                            modifier = Modifier.width(140.dp).padding(horizontal = 10.dp))
                         Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
                             modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
                     }

@@ -1,6 +1,18 @@
 package com.magnatune.player.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Piano
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,13 +93,33 @@ fun ArtistsScreen(vm: MagnatuneViewModel, nav: NavController) {
     }
 }
 
+/** Per-genre icon, mirroring the iOS genreIcon() SF Symbol mapping. */
+fun genreIcon(name: String): androidx.compose.ui.graphics.vector.ImageVector = when (name) {
+    "Classical" -> Icons.Filled.Piano
+    "New Age" -> Icons.Filled.NightsStay
+    "Electronica" -> Icons.Filled.GraphicEq
+    "World" -> Icons.Filled.Public
+    "Ambient" -> Icons.Filled.Air
+    "Jazz" -> Icons.Filled.MusicNote
+    "Hip Hop" -> Icons.Filled.Mic
+    "Alt Rock" -> Icons.Filled.LibraryMusic
+    "Electro Rock" -> Icons.Filled.Bolt
+    "Hard Rock" -> Icons.Filled.Whatshot
+    else -> Icons.Filled.MusicNote
+}
+
 @Composable
 fun GenresScreen(vm: MagnatuneViewModel, nav: NavController) {
     val genres by produceState(initialValue = emptyList<com.magnatune.player.model.Genre>()) { value = vm.allGenres() }
     LazyColumn(Modifier.fillMaxSize()) {
         items(genres, key = { it.id }) { genre ->
-            ListItem(headlineContent = { Text(genre.name) },
-                modifier = Modifier.clickableRow { nav.navigate(Routes.genre(genre.id)) })
+            ListItem(
+                headlineContent = { Text(genre.name) },
+                leadingContent = {
+                    Icon(genreIcon(genre.name), null, tint = com.magnatune.player.ui.theme.MagAccent)
+                },
+                modifier = Modifier.clickableRow { nav.navigate(Routes.genre(genre.id)) },
+            )
             HorizontalDivider()
         }
     }
