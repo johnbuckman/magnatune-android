@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magnatune.player.service.PlaybackController
 import com.magnatune.player.ui.theme.MagAccent
+import com.magnatune.player.ui.theme.MagBg
 import com.magnatune.player.ui.theme.MagCard
 import com.magnatune.player.ui.theme.magCardShadow
 import com.magnatune.player.ui.theme.MagSecondary
@@ -97,13 +98,19 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
                 Text(t?.artistName ?: "Magnatune", style = MaterialTheme.typography.bodySmall,
                     color = MagSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // Inline volume slider with mute (left) / full (right) icons, in place.
-            FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 18.dp,
-                modifier = Modifier.clickable { controller.setVolume(0f) })
-            SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                modifier = Modifier.width(82.dp).padding(horizontal = 4.dp), dotThumb = true)
-            FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 18.dp,
-                modifier = Modifier.clickable { controller.setVolume(1f) })
+            // Volume: mute / slider / full grouped inside a capsule pill (option 3).
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(MagBg)
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+            ) {
+                FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 16.dp,
+                    modifier = Modifier.clickable { controller.setVolume(0f) })
+                SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
+                    modifier = Modifier.width(76.dp).padding(horizontal = 6.dp))
+                FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 16.dp,
+                    modifier = Modifier.clickable { controller.setVolume(1f) })
+            }
             Spacer(Modifier.width(12.dp))
             AirPlayButton(vm)
             Spacer(Modifier.width(8.dp))
@@ -293,7 +300,7 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                         FaIcon(Fa.volumeOff, "Mute", tint = MagSecondary, size = 20.dp,
                             modifier = Modifier.clickable { controller.setVolume(0f) })
                         SeekSlider(value = vol, enabled = true, onValueChange = { controller.setVolume(it) },
-                            modifier = Modifier.width(140.dp).padding(horizontal = 10.dp), dotThumb = true)
+                            modifier = Modifier.width(140.dp).padding(horizontal = 10.dp))
                         FaIcon(Fa.volumeHigh, "Full volume", tint = MagSecondary, size = 20.dp,
                             modifier = Modifier.clickable { controller.setVolume(1f) })
                     }
