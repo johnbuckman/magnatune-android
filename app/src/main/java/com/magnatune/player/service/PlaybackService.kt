@@ -2,13 +2,12 @@ package com.magnatune.player.service
 
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.android.gms.cast.framework.CastContext
+import com.magnatune.player.MagnatuneApp
 
 /**
  * Foreground Media3 service hosting the ExoPlayer + MediaSession. Gives background audio, the media
@@ -18,23 +17,21 @@ import com.google.android.gms.cast.framework.CastContext
  * On devices with Google Play Services, a [CastPlayer] takes over the session while a Cast session
  * is connected (Phase 8). On non-GMS devices the Cast init is caught and ignored.
  */
+@UnstableApi
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
-    private var localPlayer: ExoPlayer? = null
+    private var localPlayer: Player? = null
     private var castPlayer: CastPlayer? = null
 
     override fun onCreate() {
         super.onCreate()
-        val player = ExoPlayer.Builder(this)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                /* handleAudioFocus = */ true,
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .build()
+        val settings = MagnatuneApp.instance.container.settings
+        val player = CrossfadePlayer(
+            context = this,
+            looper = mainLooper,
+            crossfadeEnabled = { settings.crossfadeEnabled.value },
+            crossfadeMs = { (settings.crossfadeDuration * 1000).toLong() },
+        )
         localPlayer = player
         session = MediaSession.Builder(this, player).build()
         setUpCast()
