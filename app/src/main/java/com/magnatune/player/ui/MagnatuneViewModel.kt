@@ -62,8 +62,66 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun playableForArtist(artistId: Long): List<PlayableTrack> = io { makePlayable(songsForArtist(artistId)) }
 
     // ---- user actions ----
-    fun toggleFavorite(kind: String, id: Long) = viewModelScope.launch { userStore.toggleFavorite(kind, id) }
+    fun toggleFavorite(kind: String, id: Long) = viewModelScope.launch { userStore.toggleFavorite(kind, id); deduplicateFavorites() }
     fun toggleDislike(kind: String, id: Long) = viewModelScope.launch { userStore.toggleDislike(kind, id) }
+
+    // ---- favorites resolution ----
+    suspend fun favoriteArtists(): List<com.magnatune.player.model.Artist> = withContext(Dispatchers.IO) {
+        userStore.favoriteArtistIds.value.mapNotNull { container.catalog.artist(it) }.sortedBy { it.name.lowercase() }
+    }
+    suspend fun favoriteAlbums(): List<Album> = withContext(Dispatchers.IO) {
+        userStore.favoriteAlbumIds.value.mapNotNull { container.catalog.album(it) }.sortedBy { it.name.lowercase() }
+    }
+    suspend fun favoriteSongs(): List<Song> = withContext(Dispatchers.IO) {
+        userStore.favoriteSongIds.value.mapNotNull { container.catalog.song(it) }
+    }
+
+    /** Expand a favorite/target into its song ids (song→itself, album→its songs, artist→all songs). */
+    suspend fun songIdsFor(kind: String, id: Long): List<Long> = withContext(Dispatchers.IO) {
+        when (kind) {
+            "song" -> listOf(id)
+            "album" -> container.catalog.songsForAlbum(id).map { it.id }
+            "artist" -> container.catalog.songsForArtist(id).map { it.id }
+            else -> emptyList()
+        }
+    }
+
+    // ---- playlists ----
+    fun createPlaylist(name: String, onCreated: (Long) -> Unit = {}) = viewModelScope.launch {
+        val id = userStore.createPlaylist(name); onCreated(id)
+    }
+    fun deletePlaylist(id: Long) = viewModelScope.launch { userStore.deletePlaylist(id) }
+    fun addToPlaylist(playlistId: Long, kind: String, id: Long) = viewModelScope.launch {
+        songIdsFor(kind, id).forEach { userStore.addSong(it, playlistId) }
+    }
+    fun removeFromAllPlaylists(kind: String, id: Long) = viewModelScope.launch {
+        userStore.removeSongsFromAllPlaylists(songIdsFor(kind, id))
+    }
+    suspend fun songsInPlaylist(playlistId: Long): List<Song> = withContext(Dispatchers.IO) {
+        userStore.songIds(inPlaylist = playlistId).mapNotNull { container.catalog.song(it) }
+    }
+    fun removeFromPlaylist(songId: Long, playlistId: Long) = viewModelScope.launch { userStore.removeItem(songId, playlistId) }
+
+    /** Drop redundant favorites — keep the broadest (a favorited song whose album/artist is also
+     *  favorited is removed; a favorited album whose artist is favorited is removed). Mirrors iOS. */
+    fun deduplicateFavorites() = viewModelScope.launch {
+        withContext(Dispatchers.IO) {
+            val artistIds = userStore.favoriteArtistIds.value
+            val albumIds = userStore.favoriteAlbumIds.value
+            val songIds = userStore.favoriteSongIds.value
+            val toRemove = mutableListOf<Pair<String, Long>>()
+            for (alb in albumIds) {
+                val a = container.catalog.album(alb) ?: continue
+                if (a.artistId in artistIds) toRemove.add("album" to alb)
+            }
+            for (s in songIds) {
+                val song = container.catalog.song(s) ?: continue
+                val alb = container.catalog.album(song.albumId)
+                if (song.albumId in albumIds || (alb != null && alb.artistId in artistIds)) toRemove.add("song" to s)
+            }
+            if (toRemove.isNotEmpty()) userStore.removeFavorites(toRemove)
+        }
+    }
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

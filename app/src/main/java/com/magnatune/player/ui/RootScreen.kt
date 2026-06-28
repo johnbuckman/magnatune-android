@@ -141,6 +141,7 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
             longArg(Routes.GENRE) { GenreDetailScreen(vm, nav, it) }
             longArg(Routes.TAG) { TagDetailScreen(vm, nav, it) }
             longArg(Routes.CATALOG_PLAYLIST) { CatalogPlaylistDetailScreen(vm, nav, it, onPlay) }
+            longArg(Routes.USER_PLAYLIST) { com.magnatune.player.ui.screens.UserPlaylistDetailScreen(vm, nav, it, onPlay) }
         }
     }
 }

@@ -99,7 +99,10 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
             SongRow(song = song, onClick = { onPlay(tracks, idx) },
-                trailing = { FavoriteButton(vm, "song", song.id, compact = true) })
+                trailing = {
+                    com.magnatune.player.ui.components.AddToPlaylistButton(vm, "song", song.id, compact = true)
+                    FavoriteButton(vm, "song", song.id, compact = true)
+                })
         }
     }
 }

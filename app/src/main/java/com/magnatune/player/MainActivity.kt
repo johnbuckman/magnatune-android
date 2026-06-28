@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
             container.credentials.refreshMembership()
             if (container.catalogSync.refreshIfNeeded()) container.reopenCatalog()
         }
+        vm.deduplicateFavorites()
 
         setContent {
             MagnatuneTheme {
