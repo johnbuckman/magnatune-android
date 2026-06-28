@@ -131,6 +131,12 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     }
     fun logout() = credentials.clear()
 
+    // ---- downloads / offline ----
+    val downloads get() = container.downloads
+    val isOnline get() = container.isOnline
+    fun clearDownloads() = viewModelScope.launch { container.downloads.clearAll() }
+    fun syncDownloadsNow() = viewModelScope.launch { container.downloads.syncAutoDownloads(respectToggle = false) }
+
     // ---- catalog status ----
     suspend fun catalogUpdateAvailable() = container.catalogSync.updateAvailable()
     fun refreshCatalog(onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {

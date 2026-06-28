@@ -28,6 +28,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             container.credentials.refreshMembership()
             if (container.catalogSync.refreshIfNeeded()) container.reopenCatalog()
+            container.downloads.refreshStorage()
+            container.downloads.syncAutoDownloads()
         }
         vm.deduplicateFavorites()
 

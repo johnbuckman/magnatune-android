@@ -55,7 +55,23 @@ fun SettingsScreen(vm: MagnatuneViewModel) {
         PlaybackSection(vm)
         if (vm.credentials.isMember.collectAsStateWithLifecycle().value) DownloadSection(vm)
         LibrarySection(vm)
+        StorageSection(vm)
         AboutSection()
+    }
+}
+
+@Composable
+private fun StorageSection(vm: MagnatuneViewModel) {
+    val bytes by vm.downloads.storageBytes.collectAsStateWithLifecycle()
+    val downloading by vm.downloads.downloading.collectAsStateWithLifecycle()
+    val mb = bytes / (1024.0 * 1024.0)
+    Section("Storage") {
+        Text("Downloaded music: %.1f MB".format(mb), color = MagSecondary)
+        if (downloading) Text("Downloading…", color = MagSecondary, style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { vm.syncDownloadsNow() }) { Text("Download favorites now") }
+            if (bytes > 0) OutlinedButton(onClick = { vm.clearDownloads() }) { Text("Clear downloads") }
+        }
     }
 }
 

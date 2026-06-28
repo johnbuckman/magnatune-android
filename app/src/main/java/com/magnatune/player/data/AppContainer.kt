@@ -1,6 +1,8 @@
 package com.magnatune.player.data
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import androidx.room.Room
 import com.magnatune.player.db.CatalogStore
 import com.magnatune.player.db.UserDatabase
@@ -8,6 +10,12 @@ import com.magnatune.player.db.UserStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  * Process-wide singletons (a hand-rolled service locator — small app, no DI framework needed).
@@ -28,6 +36,30 @@ class AppContainer(context: Context) {
         context = context, scope = appScope, credentials = credentials, settings = settings,
         userStore = userStore, downloadPath = { userStore.downloadPath(it) },
     )
+
+    val downloads = DownloadManager(context, credentials, settings, userStore) { catalog }
+
+    /** Whether the device currently has a usable network. */
+    val isOnline = MutableStateFlow(true)
+
+    init {
+        // Connectivity tracking.
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        isOnline.value = cm.activeNetwork != null
+        cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { isOnline.value = true }
+            override fun onLost(network: Network) { isOnline.value = false }
+        })
+        // Auto-download favorites: re-sync when favorites, the toggle, membership, or connectivity change.
+        combine(
+            userStore.favoriteSongIds, userStore.favoriteAlbumIds, userStore.favoriteArtistIds,
+            settings.autoDownloadFavorites, credentials.isMember,
+        ) { _, _, _, _, _ -> Unit }
+            .drop(1)
+            .debounce(1500)
+            .onEach { downloads.syncAutoDownloads() }
+            .launchIn(appScope)
+    }
 
     @Volatile
     private var _catalog: CatalogStore? = null
