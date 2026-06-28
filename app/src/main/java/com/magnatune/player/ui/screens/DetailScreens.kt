@@ -93,8 +93,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                     }
                 }
                 album.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MagSecondary,
-                        modifier = Modifier.padding(top = 12.dp))
+                    com.magnatune.player.ui.components.ExpandableText(it, modifier = Modifier.padding(top = 12.dp))
                 }
             }
             HorizontalDivider()
@@ -132,8 +131,7 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
                     FavoriteButton(vm, "artist", a.id)
                 }
                 (a.bio ?: a.description)?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MagSecondary,
-                        modifier = Modifier.padding(top = 12.dp))
+                    com.magnatune.player.ui.components.ExpandableText(it, modifier = Modifier.padding(top = 12.dp))
                 }
             }
             HorizontalDivider()

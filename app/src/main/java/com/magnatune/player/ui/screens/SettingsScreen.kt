@@ -162,8 +162,14 @@ private fun LibrarySection(vm: MagnatuneViewModel) {
 
 @Composable
 private fun AboutSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun open(url: String) = context.startActivity(
+        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
     Section("About") {
         Text("Magnatune — we are not evil.", color = MagSecondary)
-        Text("magnatune.com", color = MagSecondary, style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { open("http://magnatune.com/info/whynotevil") }) { Text("Why not evil") }
+            OutlinedButton(onClick = { open("http://magnatune.com/info/why") }) { Text("Founder's rant") }
+        }
     }
 }

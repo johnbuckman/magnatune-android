@@ -46,6 +46,7 @@ class PlaybackController(
     val isPlaying = MutableStateFlow(false)
     val positionMs = MutableStateFlow(0L)
     val durationMs = MutableStateFlow(0L)
+    val volume get() = settings.volume
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) { isPlaying.value = playing }
@@ -124,6 +125,7 @@ class PlaybackController(
                 queueTracks = ordered
                 val c = controller ?: return@withContext
                 c.setMediaItems(items, start, 0L)
+                c.volume = settings.volume.value
                 c.prepare()
                 c.play()
                 syncCurrent()
@@ -142,5 +144,9 @@ class PlaybackController(
         if (c.currentPosition > 3000) c.seekTo(0) else c.seekToPreviousMediaItem()
     }
     fun seekTo(ms: Long) { controller?.seekTo(ms) }
-    fun setVolume(v: Float) { controller?.volume = v.coerceIn(0f, 1f) }
+    fun setVolume(v: Float) {
+        val vol = v.coerceIn(0f, 1f)
+        settings.setVolume(vol)
+        controller?.volume = vol
+    }
 }

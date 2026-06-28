@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -113,6 +114,11 @@ private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit
                             modifier = Modifier.size(48.dp))
                     }
                     IconButton(onClick = { controller.next() }) { Icon(Icons.Filled.SkipNext, "Next") }
+                }
+                val vol by controller.volume.collectAsStateWithLifecycle()
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, "Volume", tint = MagSecondary, modifier = Modifier.size(20.dp))
+                    Slider(value = vol, onValueChange = { controller.setVolume(it) }, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }

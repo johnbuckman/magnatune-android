@@ -25,6 +25,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -162,6 +165,28 @@ fun Chip(text: String, onClick: () -> Unit) {
     ) {
         Text(text, style = MaterialTheme.typography.labelMedium, color = MagAccent,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+    }
+}
+
+/** Collapsible bio/description text with a Show more / Show less toggle (mirrors iOS ExpandableText). */
+@Composable
+fun ExpandableText(text: String, collapsedLines: Int = 4, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    var hasOverflow by remember { mutableStateOf(false) }
+    Column(modifier) {
+        Text(
+            text, style = MaterialTheme.typography.bodyMedium, color = MagSecondary,
+            maxLines = if (expanded) Int.MAX_VALUE else collapsedLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { if (!expanded) hasOverflow = it.hasVisualOverflow },
+        )
+        if (hasOverflow || expanded) {
+            Text(
+                if (expanded) "Show less" else "Show more",
+                style = MaterialTheme.typography.labelMedium, color = MagAccent,
+                modifier = Modifier.clickable { expanded = !expanded }.padding(top = 4.dp),
+            )
+        }
     }
 }
 
