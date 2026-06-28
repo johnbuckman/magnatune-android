@@ -67,6 +67,9 @@ class AppContainer(context: Context) {
         }.stateIn(appScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
 
     init {
+        // Initialize the Cast framework so the Cast button can discover routes (no-op on non-GMS).
+        runCatching { com.google.android.gms.cast.framework.CastContext.getSharedInstance(context) }
+
         // Connectivity tracking.
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         isOnline.value = cm.activeNetwork != null

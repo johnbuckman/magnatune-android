@@ -124,7 +124,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // Mascot above Settings: wide (1000x392), centered, with its left/right edges clipped to
             // the column — matches iOS.
             Box(
-                Modifier.fillMaxWidth().height(200.dp)
+                Modifier.fillMaxWidth().height(280.dp)
                     .offset(y = 20.dp)
                     .clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -133,7 +133,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(240.dp).width(612.dp),
+                    modifier = Modifier.height(480.dp).width(1224.dp),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {

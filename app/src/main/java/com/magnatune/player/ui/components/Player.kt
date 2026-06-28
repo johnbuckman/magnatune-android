@@ -103,7 +103,9 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
                 modifier = Modifier.width(82.dp).padding(horizontal = 4.dp))
             Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
                 modifier = Modifier.size(18.dp).clickable { controller.setVolume(1f) })
-            Spacer(Modifier.width(24.dp))
+            Spacer(Modifier.width(12.dp))
+            CastButton(Modifier.size(28.dp))
+            Spacer(Modifier.width(12.dp))
             TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
             Spacer(Modifier.width(6.dp))
             TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", t != null) { controller.togglePlayPause() }
@@ -287,6 +289,8 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                             modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
                     }
                 }
+                // Cast button overlaid top-left (mirrors the X); hidden on non-GMS devices.
+                CastButton(Modifier.align(Alignment.TopStart).padding(10.dp).size(28.dp))
                 // Close button overlaid in the top-right corner (~10dp from edges).
                 IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(28.dp)) {
                     Icon(Icons.Filled.Close, "Close", tint = MagSecondary)
