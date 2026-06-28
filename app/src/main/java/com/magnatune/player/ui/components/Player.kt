@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magnatune.player.service.PlaybackController
 import com.magnatune.player.ui.theme.MagAccent
 import com.magnatune.player.ui.theme.MagCard
+import com.magnatune.player.ui.theme.magCardShadow
 import com.magnatune.player.ui.theme.MagSecondary
 
 private fun fmt(ms: Long): String {
@@ -137,8 +138,9 @@ private fun Card(content: @Composable androidx.compose.foundation.layout.ColumnS
     // card (both 8dp bottom inset) and make the left gutter equal the bottom gutter (8dp), keeping
     // the right gutter (10dp).
     Surface(
-        color = MagCard, shape = RoundedCornerShape(12.dp), shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 8.dp),
+        color = MagCard, shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 8.dp)
+            .magCardShadow(),
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), content = content)
     }

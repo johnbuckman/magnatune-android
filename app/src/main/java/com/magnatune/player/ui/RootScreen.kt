@@ -69,6 +69,7 @@ import com.magnatune.player.ui.screens.SettingsScreen
 import com.magnatune.player.ui.screens.TagDetailScreen
 import com.magnatune.player.ui.screens.TagsScreen
 import com.magnatune.player.ui.theme.MagCard
+import com.magnatune.player.ui.theme.magCardShadow
 
 private fun iconFor(tab: NavTab): String = when (tab) {
     NavTab.POPULAR -> com.magnatune.player.ui.components.Fa.star
@@ -102,7 +103,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
     val current = backStack?.destination?.route
     Surface(
         color = MagCard, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        shadowElevation = 2.dp, modifier = modifier,
+        modifier = modifier.magCardShadow(),
     ) {
         androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight().padding(8.dp)) {
             // Wordmark logo (top-left).
