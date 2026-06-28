@@ -30,7 +30,16 @@
             </intent-filter>
         </activity>
 
-        <!-- PlaybackService (Media3 MediaSessionService) added in Phase 3. -->
+        <!-- Media3 playback service (foreground, background audio + lock screen). -->
+        <service
+            android:name=".service.PlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
         <!-- Cast OPTIONS_PROVIDER meta-data added in Phase 8. -->
     </application>
 </manifest>

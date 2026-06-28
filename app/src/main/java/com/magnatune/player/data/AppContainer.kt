@@ -24,6 +24,11 @@ class AppContainer(context: Context) {
 
     val settings = Settings(context)
 
+    val playback = com.magnatune.player.service.PlaybackController(
+        context = context, scope = appScope, credentials = credentials, settings = settings,
+        userStore = userStore, downloadPath = { userStore.downloadPath(it) },
+    )
+
     @Volatile
     private var _catalog: CatalogStore? = null
 

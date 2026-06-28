@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.magnatune.player.ui.MagnatuneViewModel
 import com.magnatune.player.ui.RootScreen
+import com.magnatune.player.ui.components.MiniPlayer
 import com.magnatune.player.ui.theme.MagnatuneTheme
 import kotlinx.coroutines.launch
 
@@ -22,6 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val container = (application as MagnatuneApp).container
+        container.playback.connect()
         // Verify membership + refresh the catalog in the background.
         lifecycleScope.launch {
             container.credentials.refreshMembership()
@@ -30,10 +32,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MagnatuneTheme {
-                // onPlay is a no-op until Phase 3 wires the Media3 controller.
-                RootScreen(vm = vm, onPlay = { tracks, startAt ->
-                    Log.d("Magnatune", "play ${tracks.size} tracks @ $startAt (player wired in Phase 3)")
-                })
+                RootScreen(
+                    vm = vm,
+                    onPlay = { tracks, startAt -> container.playback.play(tracks, startAt) },
+                    miniPlayer = { MiniPlayer(container.playback) },
+                )
             }
         }
     }

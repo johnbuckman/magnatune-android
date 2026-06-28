@@ -75,10 +75,10 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                     modifier = Modifier.padding(top = 2.dp).fillMaxWidth().clickableNav { nav.navigate(Routes.artist(album.artistId)) })
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { if (tracks.isNotEmpty()) onPlay(tracks, 0) }) {
+                    Button(onClick = { onPlay(tracks, 0) }) {
                         Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play")
                     }
-                    Button(onClick = { if (tracks.isNotEmpty()) { vm.settings.setShuffle(true); onPlay(tracks, 0) } }) {
+                    Button(onClick = { vm.settings.setShuffle(true); onPlay(tracks, 0) }) {
                         Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.size(4.dp)); Text("Shuffle")
                     }
                     FavoriteButton(vm, "album", album.id)
@@ -98,7 +98,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
             HorizontalDivider()
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
-            SongRow(song = song, onClick = { if (tracks.isNotEmpty()) onPlay(tracks, idx) },
+            SongRow(song = song, onClick = { onPlay(tracks, idx) },
                 trailing = { FavoriteButton(vm, "song", song.id, compact = true) })
         }
     }
@@ -120,7 +120,7 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
                 Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { if (artistTracks.isNotEmpty()) onPlay(artistTracks, 0) }) {
+                    Button(onClick = { onPlay(artistTracks, 0) }) {
                         Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play all")
                     }
                     FavoriteButton(vm, "artist", a.id)
@@ -158,7 +158,7 @@ fun CatalogPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, play
     val list = songs ?: run { CenterLoading(); return }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            Button(onClick = { if (tracks.isNotEmpty()) onPlay(tracks, 0) }, modifier = Modifier.padding(16.dp)) {
+            Button(onClick = { onPlay(tracks, 0) }, modifier = Modifier.padding(16.dp)) {
                 Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.size(4.dp)); Text("Play all")
             }
             HorizontalDivider()
@@ -166,7 +166,7 @@ fun CatalogPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, play
         itemsIndexed(list, key = { _, s -> s.id }) { idx, song ->
             SongRow(song = song, artistName = tracks.getOrNull(idx)?.artistName,
                 albumName = tracks.getOrNull(idx)?.album?.name, showArtwork = true,
-                onClick = { if (tracks.isNotEmpty()) onPlay(tracks, idx) },
+                onClick = { onPlay(tracks, idx) },
                 trailing = { FavoriteButton(vm, "song", song.id, compact = true) })
         }
     }
