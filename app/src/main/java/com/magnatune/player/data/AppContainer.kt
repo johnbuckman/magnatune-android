@@ -40,6 +40,9 @@ class AppContainer(context: Context) {
 
     val downloads = DownloadManager(context, credentials, settings, userStore) { catalog }
 
+    /** AirPlay receiver discovery (drives the AirPlay icon's visibility + picker). */
+    val airplay = com.magnatune.player.peer.AirPlayDiscovery(context).also { it.start() }
+
     /** LAN peer sync (NSD + TCP). Device name = manufacturer model. */
     val peer = com.magnatune.player.peer.PeerService(
         context = context,

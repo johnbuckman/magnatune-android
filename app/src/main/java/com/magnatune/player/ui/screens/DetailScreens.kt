@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +51,7 @@ typealias OnPlay = (List<PlayableTrack>, Int) -> Unit
 
 @Composable
 private fun CenterLoading() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    Box(Modifier.fillMaxSize())   // no spinner — local data loads near-instantly
 }
 
 @Composable

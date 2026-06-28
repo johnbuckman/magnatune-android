@@ -104,6 +104,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
             Icon(Icons.AutoMirrored.Filled.VolumeUp, "Full volume", tint = MagSecondary,
                 modifier = Modifier.size(18.dp).clickable { controller.setVolume(1f) })
             Spacer(Modifier.width(12.dp))
+            AirPlayButton(vm, Modifier.size(22.dp))
             CastButton(Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
             TransportButton(Icons.Filled.FastRewind, "Previous", t != null) { controller.previous() }
@@ -126,7 +127,7 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
         }
     }
 
-    if (showNowPlaying && t != null) NowPlayingDialog(controller, nav) { showNowPlaying = false }
+    if (showNowPlaying && t != null) NowPlayingDialog(controller, nav, vm) { showNowPlaying = false }
 }
 
 @Composable
@@ -221,7 +222,7 @@ private fun RemoteControlBar(
 }
 
 @Composable
-private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navigation.NavController, onClose: () -> Unit) {
+private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navigation.NavController, vm: com.magnatune.player.ui.MagnatuneViewModel, onClose: () -> Unit) {
     val track by controller.currentTrack.collectAsStateWithLifecycle()
     val playing by controller.isPlaying.collectAsStateWithLifecycle()
     val pos by controller.positionMs.collectAsStateWithLifecycle()
@@ -289,8 +290,13 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                             modifier = Modifier.size(20.dp).clickable { controller.setVolume(1f) })
                     }
                 }
-                // Cast button overlaid top-left (mirrors the X); hidden on non-GMS devices.
-                CastButton(Modifier.align(Alignment.TopStart).padding(10.dp).size(28.dp))
+                // AirPlay + Cast buttons overlaid top-left (mirror the X); each hidden when no
+                // device of that type is found.
+                Row(Modifier.align(Alignment.TopStart).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AirPlayButton(vm, Modifier.size(22.dp))
+                    Spacer(Modifier.width(10.dp))
+                    CastButton(Modifier.size(28.dp))
+                }
                 // Close button overlaid in the top-right corner (~10dp from edges).
                 IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(28.dp)) {
                     Icon(Icons.Filled.Close, "Close", tint = MagSecondary)
