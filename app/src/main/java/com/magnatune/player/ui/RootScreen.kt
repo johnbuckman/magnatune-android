@@ -16,8 +16,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Favorite
@@ -108,7 +109,7 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
                 contentDescription = "Magnatune",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 alignment = androidx.compose.ui.Alignment.CenterStart,
-                modifier = Modifier.fillMaxWidth().height(28.dp).padding(start = 8.dp, top = 6.dp, bottom = 4.dp),
+                modifier = Modifier.fillMaxWidth().height(42.dp).padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
             )
             androidx.compose.foundation.layout.Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 8.dp),
@@ -122,14 +123,14 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // Mascot above Settings: wide (1000x392), centered, with its left/right edges clipped to
             // the column — matches iOS.
             Box(
-                Modifier.fillMaxWidth().height(96.dp).clipToBounds(),
+                Modifier.fillMaxWidth().height(120.dp).clipToBounds(),
                 contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
             ) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(com.magnatune.player.R.drawable.magnatune_mascot),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(96.dp).width(245.dp),
+                    modifier = Modifier.height(120.dp).width(306.dp),
                 )
             }
             NavRow(NavTab.SETTINGS, current == NavTab.SETTINGS.route) {
@@ -166,11 +167,18 @@ private fun ContentTopBar(nav: NavController) {
     val route = backStack?.destination?.route
     val isTopLevel = route == null || NavTab.entries.any { it.route == route }
     if (isTopLevel) return
-    Surface(color = MagCard, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-            Text("Back", style = MaterialTheme.typography.bodyLarge)
-        }
+    // iOS-style nav back: accent chevron + "Back", no filled bar.
+    Row(
+        Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .clickable { nav.popBackStack() }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBackIos, "Back",
+            tint = com.magnatune.player.ui.theme.MagAccent, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(2.dp))
+        Text("Back", style = MaterialTheme.typography.bodyLarge, color = com.magnatune.player.ui.theme.MagAccent)
     }
 }
 

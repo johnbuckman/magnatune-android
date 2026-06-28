@@ -109,13 +109,12 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel) {
         // Seek row.
         Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(fmt(pos), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
-            Slider(
+            SeekSlider(
                 value = (scrubbing ?: (if (dur > 0) pos.toFloat() / dur else 0f)).coerceIn(0f, 1f),
                 onValueChange = { scrubbing = it },
                 onValueChangeFinished = { scrubbing?.let { controller.seekTo((it * dur).toLong()) }; scrubbing = null },
                 enabled = t != null,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                colors = accentSlider(),
             )
             Text(fmt(dur), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
         }
@@ -139,6 +138,27 @@ private fun accentSlider() = SliderDefaults.colors(
     thumbColor = MagAccent, activeTrackColor = MagAccent,
     inactiveTrackColor = MagSecondary.copy(alpha = 0.25f),
 )
+
+/** Seek slider with a short thumb (the play-position bar, 50% shorter than the default M3 thumb). */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SeekSlider(
+    value: Float, enabled: Boolean,
+    onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    Slider(
+        value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished,
+        enabled = enabled, interactionSource = interaction, colors = accentSlider(), modifier = modifier,
+        thumb = {
+            SliderDefaults.Thumb(
+                interactionSource = interaction, colors = accentSlider(), enabled = enabled,
+                thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 22.dp),
+            )
+        },
+    )
+}
 
 private fun volumeIcon(v: Float): ImageVector = when {
     v < 0.01f -> Icons.AutoMirrored.Filled.VolumeOff
@@ -210,11 +230,12 @@ private fun NowPlayingDialog(controller: PlaybackController, onClose: () -> Unit
                 Text(t.song.name, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(t.artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary)
                 Spacer(Modifier.size(16.dp))
-                Slider(
+                SeekSlider(
                     value = (scrubbing ?: (if (dur > 0) pos.toFloat() / dur else 0f)).coerceIn(0f, 1f),
+                    enabled = true,
                     onValueChange = { scrubbing = it },
                     onValueChangeFinished = { scrubbing?.let { controller.seekTo((it * dur).toLong()) }; scrubbing = null },
-                    colors = accentSlider(),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(fmt(pos), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
