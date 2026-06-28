@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base activity theme: framework Material Light, no action bar (Compose draws the UI). -->
+    <style name="Theme.Magnatune" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/mag_bg</item>
+        <item name="android:statusBarColor">@color/mag_bg</item>
+        <item name="android:navigationBarColor">@color/mag_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

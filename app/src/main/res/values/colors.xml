@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Catalyst light palette (mirrors the iOS app) -->
+    <color name="mag_bg">#FFFFFFFF</color>
+    <color name="mag_card">#FFF2F2F7</color>
+    <color name="mag_accent">#FF007AFF</color>
+    <color name="mag_hairline">#FFD9D9D9</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

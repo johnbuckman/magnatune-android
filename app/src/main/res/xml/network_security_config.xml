@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Magnatune is HTTP-only (he3 / download / www all fail TLS). Allow cleartext to
+     just those hosts; everything else stays HTTPS-only. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">magnatune.com</domain>
+    </domain-config>
+</network-security-config>
