@@ -1,5 +1,6 @@
 package com.magnatune.player.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +70,8 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
     val dur by controller.durationMs.collectAsStateWithLifecycle()
     val vol by controller.volume.collectAsStateWithLifecycle()
     val remote by vm.container.remoteFocus.collectAsStateWithLifecycle()
+    val shuffle by controller.shuffleEnabled.collectAsStateWithLifecycle()
+    val repeat by controller.repeatEnabled.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
     var scrubbing by remember { mutableStateOf<Float?>(null) }
 
@@ -108,6 +111,11 @@ fun MiniPlayer(vm: com.magnatune.player.ui.MagnatuneViewModel, nav: androidx.nav
             Spacer(Modifier.width(8.dp))
             CastButton(Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
+            // Repeat + shuffle toggles, left of the transport — matches the web player.
+            TransportToggle(Fa.repeat, "Repeat", repeat) { controller.toggleRepeat() }
+            Spacer(Modifier.width(6.dp))
+            TransportToggle(Fa.shuffle, "Shuffle", shuffle) { controller.toggleShuffle() }
+            Spacer(Modifier.width(6.dp))
             TransportButton(Fa.prev, "Previous", t != null) { controller.previous() }
             Spacer(Modifier.width(6.dp))
             TransportButton(if (playing) Fa.pause else Fa.play, "Play/Pause", t != null) { controller.togglePlayPause() }
@@ -193,6 +201,26 @@ private fun TransportButton(
     }
 }
 
+/** Accent-outlined ON/OFF transport toggle (shuffle / repeat) — fills accent when on, matching the
+ *  web player's shuffle button. */
+@Composable
+private fun TransportToggle(
+    glyph: String, desc: String, on: Boolean,
+    width: Dp = 48.dp, height: Dp = 28.dp, iconSize: Dp = 18.dp,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier.height(height).width(width)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (on) MagAccent else androidx.compose.ui.graphics.Color.Transparent)
+            .border(1.dp, MagAccent, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        FaIcon(glyph, desc, tint = if (on) androidx.compose.ui.graphics.Color.White else MagAccent, size = iconSize)
+    }
+}
+
 /** Bar shown when controlling another Magnatune device over the LAN. */
 @Composable
 private fun RemoteControlBar(
@@ -229,6 +257,8 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
     val pos by controller.positionMs.collectAsStateWithLifecycle()
     val dur by controller.durationMs.collectAsStateWithLifecycle()
     val vol by controller.volume.collectAsStateWithLifecycle()
+    val shuffle by controller.shuffleEnabled.collectAsStateWithLifecycle()
+    val repeat by controller.repeatEnabled.collectAsStateWithLifecycle()
     val t = track ?: return
     var scrubbing by remember { mutableStateOf<Float?>(null) }
 
@@ -275,10 +305,12 @@ private fun NowPlayingDialog(controller: PlaybackController, nav: androidx.navig
                         Text(fmt(dur), style = MaterialTheme.typography.labelSmall, color = MagSecondary)
                     }
                     Spacer(Modifier.size(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        TransportButton(Fa.prev, "Previous", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.previous() }
-                        TransportButton(if (playing) Fa.pause else Fa.play, "Play/Pause", true, width = 80.dp, height = 44.dp, iconSize = 28.dp) { controller.togglePlayPause() }
-                        TransportButton(Fa.next, "Next", true, width = 64.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TransportToggle(Fa.shuffle, "Shuffle", shuffle, width = 48.dp, height = 40.dp, iconSize = 20.dp) { controller.toggleShuffle() }
+                        TransportButton(Fa.prev, "Previous", true, width = 60.dp, height = 40.dp, iconSize = 24.dp) { controller.previous() }
+                        TransportButton(if (playing) Fa.pause else Fa.play, "Play/Pause", true, width = 76.dp, height = 44.dp, iconSize = 28.dp) { controller.togglePlayPause() }
+                        TransportButton(Fa.next, "Next", true, width = 60.dp, height = 40.dp, iconSize = 24.dp) { controller.next() }
+                        TransportToggle(Fa.repeat, "Repeat", repeat, width = 48.dp, height = 40.dp, iconSize = 20.dp) { controller.toggleRepeat() }
                     }
                     Spacer(Modifier.size(14.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,

@@ -87,9 +87,6 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                         Row(modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(albumNowPlaying && playing) { onPlay(tracks, 0) }
-                            Button(onClick = { vm.settings.setShuffle(true); onPlay(tracks, 0) }) {
-                                com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.shuffle, null, size = 18.dp); Spacer(Modifier.size(4.dp)); Text("Shuffle")
-                            }
                             FavoriteButton(vm, "album", album.id)
                             com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
                             com.magnatune.player.ui.components.AlbumDownloadButton(vm, album.sku)

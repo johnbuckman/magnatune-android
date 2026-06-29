@@ -37,7 +37,12 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.navigation.NavBackStackEntry
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,6 +92,7 @@ private fun iconFor(tab: NavTab): String = when (tab) {
 @Composable
 fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (NavController) -> Unit = {}) {
     val nav = rememberNavController()
+    NavRestore(nav, vm.settings)
     Row(Modifier.fillMaxSize()) {
         NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
@@ -231,4 +237,46 @@ private fun NavGraphBuilder.longArg(route: String, content: @Composable (Long) -
     composable(route, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
         content(entry.arguments?.getLong("id") ?: 0L)
     }
+}
+
+/**
+ * Remembers the page you were on across app relaunches: replays the saved nav back stack once on
+ * launch (so you land on the exact same page, with Back working), and persists the stack on every
+ * destination change.
+ */
+@Composable
+private fun NavRestore(nav: NavHostController, settings: com.magnatune.player.data.Settings) {
+    // Capture the saved stack during composition, before anything navigates.
+    val savedStack = remember { settings.navBackStack }
+
+    LaunchedEffect(Unit) {
+        // Suspend until the NavHost has installed its graph (first emission = start destination),
+        // then replay the saved stack bottom-up. No persistence happens during the replay, so the
+        // saved deep stack on disk isn't clobbered by these intermediate navigations.
+        nav.currentBackStackEntryFlow.first()
+        savedStack.forEachIndexed { i, route ->
+            if (i == 0 && route == Routes.POPULAR) return@forEachIndexed   // already the start destination
+            runCatching {
+                nav.navigate(route) {
+                    // Top-level sections sit directly above Popular (mirrors the sidebar); details just push.
+                    if (NavTab.entries.any { it.route == route }) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                }
+            }
+        }
+        // Persist the full back stack on every change. currentBackStack is a StateFlow that reflects
+        // the SETTLED stack (unlike reading currentBackStack.value inside an OnDestinationChanged
+        // listener, which races on pushes), so detail pushes are captured reliably. The first
+        // emission re-saves the restored page (a harmless no-op write).
+        nav.currentBackStack.collect { stack ->
+            settings.navBackStack = stack.mapNotNull { it.concreteRoute() }
+        }
+    }
+}
+
+/** The concrete route for a back-stack entry: top-level routes as-is, detail routes with {id} filled. */
+private fun NavBackStackEntry.concreteRoute(): String? {
+    val pat = destination.route ?: return null
+    if (!pat.contains("{id}")) return pat
+    val id = arguments?.getLong("id") ?: return pat
+    return pat.replace("{id}", id.toString())
 }

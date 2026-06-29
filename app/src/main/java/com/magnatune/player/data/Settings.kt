@@ -21,6 +21,10 @@ class Settings(context: Context) {
     val shuffleEnabled: StateFlow<Boolean> = _shuffle
     fun setShuffle(v: Boolean) = _shuffle.set("shuffle.enabled", v)
 
+    private val _repeat = bool("repeat.enabled", false)
+    val repeatEnabled: StateFlow<Boolean> = _repeat
+    fun setRepeat(v: Boolean) = _repeat.set("repeat.enabled", v)
+
     private val _crossfade = bool("crossfade.enabled", true)
     val crossfadeEnabled: StateFlow<Boolean> = _crossfade
     fun setCrossfade(v: Boolean) = _crossfade.set("crossfade.enabled", v)
@@ -66,4 +70,13 @@ class Settings(context: Context) {
     private val _peerAutostop = bool("peer.autostop.enabled", true)
     val peerAutostopEnabled: StateFlow<Boolean> = _peerAutostop
     fun setPeerAutostop(v: Boolean) = _peerAutostop.set("peer.autostop.enabled", v)
+
+    // Navigation restore — the back stack of concrete routes for the page you were last on,
+    // so a relaunch reopens exactly there. Routes never contain a newline, so '\n'-join is safe.
+    // Written with commit() (synchronous) so the latest page survives even an abrupt process kill;
+    // apply()'s async flush can lose the most recent write when the app is force-stopped.
+    var navBackStack: List<String>
+        get() = prefs.getString("nav.backstack", null)?.split('\n')?.filter { it.isNotBlank() } ?: emptyList()
+        @Suppress("ApplySharedPref")
+        set(v) { prefs.edit().putString("nav.backstack", v.joinToString("\n")).commit() }
 }

@@ -51,8 +51,20 @@ class PlaybackController(
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) { isPlaying.value = playing }
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = syncCurrent()
-        override fun onPlaybackStateChanged(state: Int) = syncCurrent()
+        override fun onPlaybackStateChanged(state: Int) {
+            // Repeat mode: when the queue finishes, loop back to the first track and keep playing.
+            // After the first pass the tracks replay from the Media3 cache, so no network is used.
+            if (state == Player.STATE_ENDED && settings.repeatEnabled.value) {
+                controller?.takeIf { it.mediaItemCount > 0 }?.let { it.seekTo(0, 0L); it.play() }
+            }
+            syncCurrent()
+        }
     }
+
+    val shuffleEnabled get() = settings.shuffleEnabled
+    val repeatEnabled get() = settings.repeatEnabled
+    fun toggleShuffle() = settings.setShuffle(!settings.shuffleEnabled.value)
+    fun toggleRepeat() = settings.setRepeat(!settings.repeatEnabled.value)
 
     fun connect() {
         if (controller != null) return

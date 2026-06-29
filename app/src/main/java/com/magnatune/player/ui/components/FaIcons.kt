@@ -38,6 +38,7 @@ object Fa {
     const val next = ""            // forward-step
     const val prev = ""            // backward-step
     const val shuffle = ""
+    const val repeat = "\uF363"     // fa-repeat
     const val volumeHigh = ""
     const val volumeLow = ""
     const val volumeOff = ""       // volume-xmark
