@@ -28,6 +28,13 @@ class AirPlayDiscovery(context: Context) {
     private val found = ConcurrentHashMap<String, Device>()
     private var listener: NsdManager.DiscoveryListener? = null
 
+    // NsdManager (pre-API-34) allows only ONE resolveService at a time; concurrent resolves fail
+    // with FAILURE_ALREADY_ACTIVE and leave host=null. Serialize them through a queue, with a few
+    // retries per service so every discovered device ends up with a resolved host/port.
+    private val resolveQueue = ArrayDeque<NsdServiceInfo>()
+    private var resolving = false
+    private val attempts = ConcurrentHashMap<String, Int>()
+
     /** RAOP advertises as "<MAC>@<Speaker Name>"; show the friendly part. */
     private fun friendly(serviceName: String): String =
         serviceName.substringAfter('@', serviceName)
@@ -43,28 +50,57 @@ class AirPlayDiscovery(context: Context) {
                 found.remove(s.serviceName); publish()
             }
             override fun onServiceFound(s: NsdServiceInfo) {
-                // Resolve to get host/port; add as soon as we know the name.
+                // Add as soon as we know the name; queue a (serialized) resolve for host/port.
                 found[s.serviceName] = Device(s.serviceName, friendly(s.serviceName), null, 0)
                 publish()
-                runCatching {
-                    nsd.resolveService(s, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(si: NsdServiceInfo, e: Int) {}
-                        override fun onServiceResolved(si: NsdServiceInfo) {
-                            found[si.serviceName] = Device(si.serviceName, friendly(si.serviceName),
-                                si.host?.hostAddress, si.port)
-                            publish()
-                        }
-                    })
-                }
+                enqueueResolve(s)
             }
         }
         listener = l
         runCatching { nsd.discoverServices("_raop._tcp", NsdManager.PROTOCOL_DNS_SD, l) }
     }
 
+    private fun enqueueResolve(s: NsdServiceInfo) {
+        synchronized(resolveQueue) { resolveQueue.addLast(s) }
+        pumpResolve()
+    }
+
+    private fun pumpResolve() {
+        val next: NsdServiceInfo
+        synchronized(resolveQueue) {
+            if (resolving || resolveQueue.isEmpty()) return
+            resolving = true
+            next = resolveQueue.removeFirst()
+        }
+        val done = { synchronized(resolveQueue) { resolving = false }; pumpResolve() }
+        runCatching {
+            nsd.resolveService(next, object : NsdManager.ResolveListener {
+                override fun onResolveFailed(si: NsdServiceInfo, e: Int) {
+                    val n = (attempts[si.serviceName] ?: 0) + 1
+                    attempts[si.serviceName] = n
+                    if (n <= 3) synchronized(resolveQueue) { resolveQueue.addLast(si) }  // retry later
+                    done()
+                }
+                override fun onServiceResolved(si: NsdServiceInfo) {
+                    attempts.remove(si.serviceName)
+                    val txt = runCatching {
+                        si.attributes.entries.joinToString(" ") { (k, v) -> "$k=${v?.let { String(it) }}" }
+                    }.getOrDefault("")
+                    android.util.Log.i("RAOP", "resolved ${si.serviceName} ${si.host?.hostAddress}:${si.port} TXT[$txt]")
+                    found[si.serviceName] = Device(si.serviceName, friendly(si.serviceName),
+                        si.host?.hostAddress, si.port)
+                    publish()
+                    done()
+                }
+            })
+        }.onFailure { done() }
+    }
+
     fun stop() {
         listener?.let { runCatching { nsd.stopServiceDiscovery(it) } }
         listener = null
+        synchronized(resolveQueue) { resolveQueue.clear(); resolving = false }
+        attempts.clear()
         found.clear(); publish()
     }
 

@@ -8,6 +8,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.android.gms.cast.framework.CastContext
 import com.magnatune.player.MagnatuneApp
+import kotlinx.coroutines.launch
 
 /**
  * Foreground Media3 service hosting the ExoPlayer + MediaSession. Gives background audio, the media
@@ -25,16 +26,39 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val settings = MagnatuneApp.instance.container.settings
+        val container = MagnatuneApp.instance.container
+        val settings = container.settings
         val player = CrossfadePlayer(
             context = this,
             looper = mainLooper,
             crossfadeEnabled = { settings.crossfadeEnabled.value },
             crossfadeMs = { (settings.crossfadeDuration * 1000).toLong() },
+            airplay = container.airplayRouter,
         )
         localPlayer = player
         session = MediaSession.Builder(this, player).build()
         setUpCast()
+        observeAirPlay(player)
+    }
+
+    /** Start/stop the RAOP session (and mute local) as the user picks/clears an AirPlay device. */
+    private fun observeAirPlay(player: CrossfadePlayer) {
+        val container = MagnatuneApp.instance.container
+        val main = android.os.Handler(mainLooper)
+        container.appScope.launch {
+            container.airplay.selected.collect { dev ->
+                val host = dev?.host
+                android.util.Log.i("RAOP", "selected=${dev?.name} host=$host port=${dev?.port}")
+                if (dev != null && host != null) {
+                    container.airplayRouter.connect(host, dev.port, initialVolume = 1f) { ok ->
+                        main.post { if (ok) player.setAirPlayActive(true) }
+                    }
+                } else {
+                    main.post { player.setAirPlayActive(false) }
+                    container.airplayRouter.disconnect()
+                }
+            }
+        }
     }
 
     /** Wire Cast handoff. Guarded — CastContext init throws on non-GMS devices; we ignore it. */

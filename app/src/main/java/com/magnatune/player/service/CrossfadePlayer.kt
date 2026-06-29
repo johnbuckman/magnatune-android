@@ -28,9 +28,43 @@ class CrossfadePlayer(
     private val looper: Looper,
     private val crossfadeEnabled: () -> Boolean,
     private val crossfadeMs: () -> Long,
+    private val airplay: com.magnatune.player.peer.AirPlayRouter? = null,
 ) : SimpleBasePlayer(looper) {
 
-    private fun buildExo() = ExoPlayer.Builder(context)
+    // Tees decoded 16-bit PCM to the AirPlay session while casting (passes audio through unchanged).
+    private var tapLogN = 0
+    private val tapSink = object : androidx.media3.exoplayer.audio.TeeAudioProcessor.AudioBufferSink {
+        override fun flush(sampleRateHz: Int, channelCount: Int, encoding: Int) {
+            android.util.Log.i("RAOP", "tap flush sr=$sampleRateHz ch=$channelCount enc=$encoding airplayActive=$airplayActive")
+        }
+        override fun handleBuffer(buffer: java.nio.ByteBuffer) {
+            if (!airplayActive) return
+            val len = buffer.remaining()
+            if (len <= 0) return
+            val arr = ByteArray(len)
+            buffer.get(arr)                    // read-only duplicate — passthrough is unaffected
+            if (tapLogN++ % 200 == 0) {
+                var nz = 0; var i = 0; while (i < arr.size && nz == 0) { if (arr[i].toInt() != 0) nz = 1; i++ }
+                android.util.Log.i("RAOP", "tap pcm len=$len nonzero=$nz")
+            }
+            airplay?.enqueuePcm(arr, 0, len)
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun audioRenderersFactory() = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+        override fun buildAudioSink(
+            context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean,
+        ): androidx.media3.exoplayer.audio.AudioSink =
+            androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(false)   // keep 16-bit PCM so the tap matches the ALAC packer
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                .setAudioProcessors(arrayOf(androidx.media3.exoplayer.audio.TeeAudioProcessor(tapSink)))
+                .build()
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildExo() = ExoPlayer.Builder(context, audioRenderersFactory())
         .setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
@@ -39,6 +73,24 @@ class CrossfadePlayer(
         .setHandleAudioBecomingNoisy(true)
         .setLooper(looper)
         .build()
+
+    // When an AirPlay device is streaming, local speakers are muted (volume 0) but decoding
+    // continues so PCM still flows to the tap; crossfade is suspended for a single clean stream.
+    @Volatile private var airplayActive = false
+    private fun effVol() = if (airplayActive) 0f else masterVolume
+
+    fun setAirPlayActive(on: Boolean) {
+        android.util.Log.i("RAOP", "setAirPlayActive on=$on")
+        airplayActive = on
+        if (on) {
+            crossfading = false
+            playersArr.forEach { it.volume = 0f }
+            airplay?.setVolume(masterVolume)
+        } else {
+            active.volume = masterVolume
+            inactive.volume = 0f
+        }
+    }
 
     private val playersArr = arrayOf(buildExo(), buildExo())
     private var activeIdx = 0
@@ -157,7 +209,8 @@ class CrossfadePlayer(
 
     override fun handleSetVolume(volume: Float): ListenableFuture<*> {
         masterVolume = volume.coerceIn(0f, 1f)
-        if (!crossfading) active.volume = masterVolume
+        if (airplayActive) airplay?.setVolume(masterVolume)
+        else if (!crossfading) active.volume = masterVolume
         return Futures.immediateVoidFuture()
     }
 
@@ -170,7 +223,7 @@ class CrossfadePlayer(
 
     // ---- engine ----
     private fun loadActive(positionMs: Long) {
-        active.volume = masterVolume
+        active.volume = effVol()
         active.setMediaItem(items[currentIndex], positionMs)
         active.prepare()
         active.playWhenReady = playWhenReadyState
@@ -207,7 +260,7 @@ class CrossfadePlayer(
             if (hasNextItem()) swapToNext(hardCut = true) else { playWhenReadyState = false; invalidateState() }
             return
         }
-        if (!playWhenReadyState || !crossfadeEnabled() || !hasNextItem() || !nextPrepared) return
+        if (!playWhenReadyState || !crossfadeEnabled() || airplayActive || !hasNextItem() || !nextPrepared) return
         val dur = active.duration
         if (dur <= 0) return
         val remaining = dur - active.currentPosition
@@ -225,11 +278,11 @@ class CrossfadePlayer(
     private fun swapToNext(hardCut: Boolean) {
         active.stop()
         active.clearMediaItems()
-        active.volume = masterVolume
+        active.volume = effVol()
         activeIdx = 1 - activeIdx
         currentIndex += 1
         crossfading = false
-        active.volume = masterVolume
+        active.volume = effVol()
         active.playWhenReady = playWhenReadyState
         prefetchNext()
         invalidateState()
@@ -240,8 +293,8 @@ class CrossfadePlayer(
         crossfading = false
         inactive.stop()
         inactive.clearMediaItems()
-        inactive.volume = masterVolume
-        active.volume = masterVolume
+        inactive.volume = if (airplayActive) 0f else masterVolume
+        active.volume = effVol()
         nextPrepared = false
     }
 }

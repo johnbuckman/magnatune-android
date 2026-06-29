@@ -43,6 +43,9 @@ class AppContainer(context: Context) {
     /** AirPlay receiver discovery (drives the AirPlay icon's visibility + picker). */
     val airplay = com.magnatune.player.peer.AirPlayDiscovery(context).also { it.start() }
 
+    /** Owns the active AirPlay (RAOP) streaming session; bridges the player's PCM tap to it. */
+    val airplayRouter = com.magnatune.player.peer.AirPlayRouter()
+
     /** LAN peer sync (NSD + TCP). Device name = manufacturer model. */
     val peer = com.magnatune.player.peer.PeerService(
         context = context,

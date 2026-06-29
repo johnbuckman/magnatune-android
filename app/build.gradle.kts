@@ -14,6 +14,7 @@ val keystoreProps = Properties().apply { if (keystorePropsFile.exists()) load(ke
 android {
     namespace = "com.magnatune.player"
     compileSdk = 35
+    ndkVersion = "27.3.13750724"
 
     defaultConfig {
         applicationId = "com.magnatune.player"
@@ -22,6 +23,14 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         vectorDrawables { useSupportLibrary = true }
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     signingConfigs {
@@ -96,6 +105,12 @@ dependencies {
 
     // Encrypted credentials store
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // BouncyCastle — crypto for the AirPlay-2 sender (SRP, X25519/Ed25519, ChaCha20-Poly1305,
+    // HKDF, AES-CTR). Used via the lightweight org.bouncycastle.crypto API, not as a JCA provider,
+    // so it doesn't clash with Android's repackaged bouncycastle. (ChaCha20Poly1305 in javax.crypto
+    // needs API 28+, but the target tablet is API 27.)
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
 
     // Background catalog refresh
     implementation("androidx.work:work-runtime-ktx:2.10.0")
