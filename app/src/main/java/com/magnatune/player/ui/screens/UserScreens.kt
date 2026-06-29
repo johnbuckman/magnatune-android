@@ -47,11 +47,17 @@ fun FavoritesScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
     val favAlbumIds by vm.userStore.favoriteAlbumIds.collectAsStateWithLifecycle()
     val favSongIds by vm.userStore.favoriteSongIds.collectAsStateWithLifecycle()
 
-    val artists by produceState(emptyList<Artist>(), favArtistIds) { value = vm.favoriteArtists() }
-    val albums by produceState(emptyList<Album>(), favAlbumIds) { value = vm.favoriteAlbums() }
-    val songs by produceState(emptyList<Song>(), favSongIds) { value = vm.favoriteSongs() }
+    val artistsRaw by produceState(emptyList<Artist>(), favArtistIds) { value = vm.favoriteArtists() }
+    val albumsRaw by produceState(emptyList<Album>(), favAlbumIds) { value = vm.favoriteAlbums() }
+    val songsRaw by produceState(emptyList<Song>(), favSongIds) { value = vm.favoriteSongs() }
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
-    val songTracks by produceState(emptyList<PlayableTrack>(), songs) { value = vm.playable(songs) }
+    val songTracksRaw by produceState(emptyList<PlayableTrack>(), songsRaw) { value = vm.playable(songsRaw) }
+    // Hide anything caught by "Hide things I dislike" (e.g. a favorite album's disliked-genre songs).
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    val artists = artistsRaw.filter { it.id !in supp.artists }
+    val albums = albumsRaw.filter { it.id !in supp.albums }
+    val songs = songsRaw.filter { it.id !in supp.songs }
+    val songTracks = songTracksRaw.filter { it.song.id !in supp.songs }
 
     if (artists.isEmpty() && albums.isEmpty() && songs.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -117,8 +123,11 @@ fun PlaylistsScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
 @Composable
 fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlistId: Long, onPlay: OnPlay) {
     val playlisted by vm.userStore.playlistedSongIds.collectAsStateWithLifecycle()
-    val songs by produceState(emptyList<Song>(), playlistId, playlisted) { value = vm.songsInPlaylist(playlistId) }
-    val tracks by produceState(emptyList<PlayableTrack>(), songs) { value = vm.playable(songs) }
+    val songsRaw by produceState(emptyList<Song>(), playlistId, playlisted) { value = vm.songsInPlaylist(playlistId) }
+    val tracksRaw by produceState(emptyList<PlayableTrack>(), songsRaw) { value = vm.playable(songsRaw) }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    val songs = songsRaw.filter { it.id !in supp.songs }
+    val tracks = tracksRaw.filter { it.song.id !in supp.songs }
 
     LazyColumn(Modifier.fillMaxSize()) {
         item {

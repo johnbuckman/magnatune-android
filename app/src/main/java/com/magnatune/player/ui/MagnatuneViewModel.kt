@@ -10,6 +10,10 @@ import com.magnatune.player.model.Album
 import com.magnatune.player.model.PlayableTrack
 import com.magnatune.player.model.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -66,6 +70,55 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     // ---- user actions ----
     fun toggleFavorite(kind: String, id: Long) = viewModelScope.launch { userStore.toggleFavorite(kind, id); deduplicateFavorites() }
     fun toggleDislike(kind: String, id: Long) = viewModelScope.launch { userStore.toggleDislike(kind, id) }
+
+    // ---- dislike suppression (mirrors iOS AppModel.recomputeDislikeSuppression) ----
+    // Reactive set of everything hidden while "Hide things I dislike" is on. A disliked
+    // artist hides its albums; a disliked genre hides every album in it; both drag the
+    // songs along. An artist whose entire catalog is in disliked genres is hidden too, and
+    // a tag / Featured playlist left with no visible item is hidden. When the toggle is off
+    // nothing is suppressed. Screens collect this and filter their lists, so disliking
+    // updates the UI live.
+    val suppression: StateFlow<Suppression> = combine(
+        userStore.dislikedArtistIds,
+        userStore.dislikedAlbumIds,
+        userStore.dislikedSongIds,
+        userStore.dislikedGenreIds,
+        settings.hideDislikes,
+    ) { dArtists, dAlbums, dSongs, dGenres, hide ->
+        if (!hide) Suppression()
+        else withContext(Dispatchers.IO) { computeSuppression(dArtists, dAlbums, dSongs, dGenres) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, Suppression())
+
+    private fun computeSuppression(
+        dArtists: Set<Long>, dAlbums: Set<Long>, dSongs: Set<Long>, dGenres: Set<Long>,
+    ): Suppression {
+        val c = container.catalog
+        val artists = dArtists.toMutableSet()
+        val albums = dAlbums.toMutableSet()
+        val songs = dSongs.toMutableSet()
+        for (aid in dArtists) for (al in c.albumsForArtist(aid)) albums.add(al.id)
+        // A disliked genre hides every album in it; remember those albums + their artists.
+        val genreAlbums = mutableSetOf<Long>()
+        val candidates = mutableSetOf<Long>()
+        for (gid in dGenres) for (al in c.albumsForGenre(gid)) {
+            albums.add(al.id); genreAlbums.add(al.id); candidates.add(al.artistId)
+        }
+        // Hide an artist whose every album is in a disliked genre.
+        for (aid in candidates) if (aid !in artists) {
+            val theirs = c.albumsForArtist(aid)
+            if (theirs.isNotEmpty() && theirs.all { it.id in genreAlbums }) artists.add(aid)
+        }
+        // Every suppressed album drags its songs along.
+        for (alid in albums) for (s in c.songsForAlbum(alid)) songs.add(s.id)
+        // A Featured playlist with no surviving song, or a tag with no surviving album, hides.
+        val emptyPlaylists = c.catalogPlaylists()
+            .filter { pl -> c.songsForCatalogPlaylist(pl.id).all { it.id in songs } }
+            .map { it.id }.toSet()
+        val emptyTags = c.allTags()
+            .filter { tag -> c.albumsForTag(tag.id).all { it.id in albums } }
+            .map { it.id }.toSet()
+        return Suppression(artists, albums, songs, dGenres.toSet(), emptyTags, emptyPlaylists)
+    }
 
     // ---- favorites resolution ----
     suspend fun favoriteArtists(): List<com.magnatune.player.model.Artist> = withContext(Dispatchers.IO) {
@@ -158,4 +211,14 @@ data class SearchResults(
     val artists: List<com.magnatune.player.model.Artist>,
     val albums: List<Album>,
     val songs: List<Song>,
+)
+
+/** Everything currently hidden by "Hide things I dislike" (empty when the toggle is off). */
+data class Suppression(
+    val artists: Set<Long> = emptySet(),
+    val albums: Set<Long> = emptySet(),
+    val songs: Set<Long> = emptySet(),
+    val genres: Set<Long> = emptySet(),
+    val tags: Set<Long> = emptySet(),
+    val playlists: Set<Long> = emptySet(),
 )
