@@ -75,6 +75,27 @@ fun FavoriteButton(vm: MagnatuneViewModel, kind: String, id: Long, compact: Bool
     }
 }
 
+/** Standalone broken-heart dislike button (e.g. on a Genres row). Reuses the generic
+ *  dislikes table via kind; "genre" needs no migration. */
+@Composable
+fun DislikeButton(vm: MagnatuneViewModel, kind: String, id: Long, compact: Boolean = false) {
+    val disSongs by vm.userStore.dislikedSongIds.collectAsStateWithLifecycle()
+    val disAlbums by vm.userStore.dislikedAlbumIds.collectAsStateWithLifecycle()
+    val disArtists by vm.userStore.dislikedArtistIds.collectAsStateWithLifecycle()
+    val disGenres by vm.userStore.dislikedGenreIds.collectAsStateWithLifecycle()
+    val isDis = when (kind) {
+        "song" -> disSongs; "album" -> disAlbums; "artist" -> disArtists; else -> disGenres
+    }.contains(id)
+    val sz = if (compact) 32.dp else 40.dp
+    IconButton(onClick = { vm.toggleDislike(kind, id) }, modifier = Modifier.size(sz)) {
+        Icon(
+            painterResource(if (isDis) R.drawable.ic_dislike_solid else R.drawable.ic_dislike_light),
+            contentDescription = "Dislike", tint = if (isDis) MagAccent else MagSecondary,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
 /** Album grid cell: cover + album name + artist name. */
 @Composable
 fun AlbumCell(album: Album, artistName: String, onClick: () -> Unit, modifier: Modifier = Modifier) {

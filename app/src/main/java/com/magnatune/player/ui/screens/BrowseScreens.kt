@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -50,9 +51,12 @@ private fun Loading() {
 fun PopularScreen(vm: MagnatuneViewModel, nav: NavController) {
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
     val rows by produceState<List<Pair<String, List<Album>>>?>(null) { value = vm.popularByGenre() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     if (rows == null || names == null) { Loading(); return }
+    // Drop disliked-genre albums; a row whose albums are all gone (a disliked genre) vanishes.
+    val visibleRows = rows!!.map { (g, a) -> g to a.filter { it.id !in supp.albums } }.filter { it.second.isNotEmpty() }
     LazyColumn(Modifier.fillMaxSize()) {
-        items(rows!!, key = { it.first }) { (genre, albums) ->
+        items(visibleRows, key = { it.first }) { (genre, albums) ->
             SectionHeader(genre)
             LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) {
                 items(albums, key = { it.id }) { album ->
@@ -71,10 +75,12 @@ fun PopularScreen(vm: MagnatuneViewModel, nav: NavController) {
 fun AlbumsScreen(vm: MagnatuneViewModel, nav: NavController) {
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
     val albums by produceState<List<Album>?>(null) { value = vm.allAlbums() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     if (albums == null || names == null) { Loading(); return }
+    val shown = albums!!.filter { it.id !in supp.albums }
     LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) {
-        items(albums!!, key = { it.id }) { album ->
+        items(shown, key = { it.id }) { album ->
             AlbumCell(album, names!![album.artistId] ?: "", onClick = { nav.navigate(Routes.album(album.id)) })
         }
     }
@@ -83,9 +89,10 @@ fun AlbumsScreen(vm: MagnatuneViewModel, nav: NavController) {
 @Composable
 fun ArtistsScreen(vm: MagnatuneViewModel, nav: NavController) {
     val artists by produceState(initialValue = emptyList<com.magnatune.player.model.Artist>()) { value = vm.allArtists() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     if (artists.isEmpty()) { Loading(); return }
     LazyColumn(Modifier.fillMaxSize()) {
-        items(artists, key = { it.id }) { artist ->
+        items(artists.filter { it.id !in supp.artists }, key = { it.id }) { artist ->
             ArtistRow(artist = artist, albumName = null, onClick = { nav.navigate(Routes.artist(artist.id)) })
             HorizontalDivider()
         }
@@ -110,14 +117,18 @@ fun genreIcon(name: String): String = when (name) {
 @Composable
 fun GenresScreen(vm: MagnatuneViewModel, nav: NavController) {
     val genres by produceState(initialValue = emptyList<com.magnatune.player.model.Genre>()) { value = vm.allGenres() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize()) {
-        items(genres, key = { it.id }) { genre ->
+        items(genres.filter { it.id !in supp.genres }, key = { it.id }) { genre ->
             ListItem(
                 headlineContent = { Text(genre.name) },
                 leadingContent = {
                     com.magnatune.player.ui.components.FaIcon(genreIcon(genre.name), null,
                         tint = com.magnatune.player.ui.theme.MagAccent, size = 20.dp)
                 },
+                // Disliking a genre hides it here + in Popular and hides its songs everywhere
+                // (albums/songs/playlists), plus artists/tags/featured left empty.
+                trailingContent = { com.magnatune.player.ui.components.DislikeButton(vm, "genre", genre.id) },
                 modifier = Modifier.clickableRow { nav.navigate(Routes.genre(genre.id)) },
             )
             HorizontalDivider()
@@ -128,8 +139,9 @@ fun GenresScreen(vm: MagnatuneViewModel, nav: NavController) {
 @Composable
 fun TagsScreen(vm: MagnatuneViewModel, nav: NavController) {
     val tags by produceState(initialValue = emptyList<com.magnatune.player.model.Tag>()) { value = vm.allTags() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize()) {
-        items(tags, key = { it.id }) { tag ->
+        items(tags.filter { it.id !in supp.tags }, key = { it.id }) { tag ->
             ListItem(headlineContent = { Text(tag.name) },
                 modifier = Modifier.clickableRow { nav.navigate(Routes.tag(tag.id)) })
             HorizontalDivider()
@@ -140,8 +152,9 @@ fun TagsScreen(vm: MagnatuneViewModel, nav: NavController) {
 @Composable
 fun FeaturedScreen(vm: MagnatuneViewModel, nav: NavController) {
     val playlists by produceState(initialValue = emptyList<com.magnatune.player.model.CatalogPlaylist>()) { value = vm.catalogPlaylists() }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize()) {
-        items(playlists, key = { it.id }) { pl ->
+        items(playlists.filter { it.id !in supp.playlists }, key = { it.id }) { pl ->
             ListItem(headlineContent = { Text(pl.name) },
                 modifier = Modifier.clickableRow { nav.navigate(Routes.catalogPlaylist(pl.id)) })
             HorizontalDivider()
@@ -153,10 +166,11 @@ fun FeaturedScreen(vm: MagnatuneViewModel, nav: NavController) {
 fun GenreDetailScreen(vm: MagnatuneViewModel, nav: NavController, genreId: Long) {
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
     val albums by produceState<List<Album>?>(null, genreId) { value = vm.albumsForGenre(genreId) }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     if (albums == null || names == null) { Loading(); return }
     LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) {
-        items(albums!!, key = { it.id }) { album ->
+        items(albums!!.filter { it.id !in supp.albums }, key = { it.id }) { album ->
             AlbumCell(album, names!![album.artistId] ?: "", onClick = { nav.navigate(Routes.album(album.id)) })
         }
     }
@@ -166,10 +180,11 @@ fun GenreDetailScreen(vm: MagnatuneViewModel, nav: NavController, genreId: Long)
 fun TagDetailScreen(vm: MagnatuneViewModel, nav: NavController, tagId: Long) {
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
     val albums by produceState<List<Album>?>(null, tagId) { value = vm.albumsForTag(tagId) }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
     if (albums == null || names == null) { Loading(); return }
     LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) {
-        items(albums!!, key = { it.id }) { album ->
+        items(albums!!.filter { it.id !in supp.albums }, key = { it.id }) { album ->
             AlbumCell(album, names!![album.artistId] ?: "", onClick = { nav.navigate(Routes.album(album.id)) })
         }
     }

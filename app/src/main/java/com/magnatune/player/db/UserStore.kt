@@ -23,6 +23,7 @@ class UserStore(private val dao: UserDao, private val scope: CoroutineScope) {
     val dislikedSongIds = idSet(dao.dislikeIdsFlow("song"))
     val dislikedAlbumIds = idSet(dao.dislikeIdsFlow("album"))
     val dislikedArtistIds = idSet(dao.dislikeIdsFlow("artist"))
+    val dislikedGenreIds = idSet(dao.dislikeIdsFlow("genre"))
 
     val playlistedSongIds = idSet(dao.playlistedSongIdsFlow())
     val playlists: StateFlow<List<PlaylistSummary>> =
@@ -41,6 +42,7 @@ class UserStore(private val dao: UserDao, private val scope: CoroutineScope) {
         "song" -> dislikedSongIds.value.contains(id)
         "album" -> dislikedAlbumIds.value.contains(id)
         "artist" -> dislikedArtistIds.value.contains(id)
+        "genre" -> dislikedGenreIds.value.contains(id)
         else -> false
     }
 
