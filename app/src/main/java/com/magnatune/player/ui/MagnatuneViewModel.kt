@@ -13,6 +13,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Sort order for the Albums/Artists browse lists, shown in a menu beside the filter box. */
+enum class BrowseSort(val label: String) {
+    POPULAR("Popular"), ALPHABETICAL("Alphabetical"), RECENT("Date")   // segmented order; "Date" = was "Recent"
+}
+
 /**
  * Shared view-model exposing the catalog (read via IO-dispatched suspend helpers) and the user
  * state (favorites/dislikes/playlists), plus actions. Mirrors the iOS AppModel's role.
@@ -36,6 +41,20 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun allArtists() = io { allArtists() }
     suspend fun artistNames() = io { artistNames() }
     suspend fun allAlbums() = io { albumsByPopularity() }
+    suspend fun albumsSorted(sort: BrowseSort) = io {
+        when (sort) {
+            BrowseSort.RECENT -> albumsByRecent()
+            BrowseSort.ALPHABETICAL -> allAlbums()
+            BrowseSort.POPULAR -> albumsByPopularity()
+        }
+    }
+    suspend fun artistsSorted(sort: BrowseSort) = io {
+        when (sort) {
+            BrowseSort.RECENT -> artistsByRecent()
+            BrowseSort.ALPHABETICAL -> allArtists()
+            BrowseSort.POPULAR -> artistsByPopularity()
+        }
+    }
     suspend fun allGenres() = io { allGenres() }
     suspend fun allTags() = io { allTags() }
     suspend fun catalogPlaylists() = io { catalogPlaylists() }
@@ -50,6 +69,7 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun albumsForTag(id: Long) = io { albumsForTag(id) }
     suspend fun songsForCatalogPlaylist(id: Long) = io { songsForCatalogPlaylist(id) }
     suspend fun genresAndTags(albumId: Long) = io { genresAndTags(albumId) }
+    suspend fun genresAndTagsForArtist(artistId: Long) = io { genresAndTagsForArtist(artistId) }
     suspend fun recommendedAlbums(albumId: Long) = io { recommendedAlbums(albumId) }
     suspend fun recommendedArtists(artistId: Long) = io { recommendedArtists(artistId) }
 

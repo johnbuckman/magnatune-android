@@ -66,6 +66,15 @@ class CatalogStore(path: String) {
 
     // ---- Artists ----
     fun allArtists() = query("SELECT * FROM artists ORDER BY name COLLATE NOCASE", map = ::toArtist)
+    /** Artists ordered by their newest album's release date (newest first). Artists have no date
+     *  of their own, so we sort by MAX(album.release_date) across the artist's albums. */
+    fun artistsByRecent() = query(
+        "SELECT ar.* FROM artists ar LEFT JOIN albums a ON a.artist_id = ar.artists_id " +
+            "GROUP BY ar.artists_id ORDER BY MAX(a.release_date) DESC, ar.name COLLATE NOCASE", map = ::toArtist)
+    /** Artists ordered by their most-popular album (highest first), via MAX(album.popularity). */
+    fun artistsByPopularity() = query(
+        "SELECT ar.* FROM artists ar LEFT JOIN albums a ON a.artist_id = ar.artists_id " +
+            "GROUP BY ar.artists_id ORDER BY MAX(a.popularity) DESC, ar.name COLLATE NOCASE", map = ::toArtist)
     fun artist(id: Long) = queryOne("SELECT * FROM artists WHERE artists_id = ?", arrayOf(id.toString()), ::toArtist)
     fun artistNames(): Map<Long, String> =
         query("SELECT artists_id, name FROM artists") { it.long("artists_id") to it.str("name") }.toMap()
@@ -87,6 +96,8 @@ class CatalogStore(path: String) {
         query("SELECT * FROM albums ORDER BY popularity DESC LIMIT ?", arrayOf(limit.toString()), ::toAlbum)
     fun albumsByPopularity() =
         query("SELECT * FROM albums ORDER BY popularity DESC, name COLLATE NOCASE", map = ::toAlbum)
+    fun albumsByRecent() =
+        query("SELECT * FROM albums ORDER BY release_date DESC, name COLLATE NOCASE", map = ::toAlbum)
 
     // ---- Songs ----
     fun songsForAlbum(albumId: Long) =
@@ -125,6 +136,20 @@ class CatalogStore(path: String) {
             "WHERE ga.album_id = ? ORDER BY g.name COLLATE NOCASE", arrayOf(albumId.toString()), ::toGenre)
         val tags = query("SELECT c.* FROM collections c JOIN collections_albums ca ON ca.collection_id = c.collections_id " +
             "WHERE ca.album_id = ? ORDER BY c.name COLLATE NOCASE", arrayOf(albumId.toString()), ::toTag)
+        return genres to tags
+    }
+
+    /** The genres + tags for an artist, aggregated across all of the artist's albums.
+     *  Shown as chips on the artist page, the same way as on an album page. */
+    fun genresAndTagsForArtist(artistId: Long): Pair<List<Genre>, List<Tag>> {
+        val genres = query("SELECT DISTINCT g.* FROM genres g " +
+            "JOIN genres_albums ga ON ga.genre_id = g.genre_id " +
+            "JOIN albums a ON a.album_id = ga.album_id " +
+            "WHERE a.artist_id = ? ORDER BY g.name COLLATE NOCASE", arrayOf(artistId.toString()), ::toGenre)
+        val tags = query("SELECT DISTINCT c.* FROM collections c " +
+            "JOIN collections_albums ca ON ca.collection_id = c.collections_id " +
+            "JOIN albums a ON a.album_id = ca.album_id " +
+            "WHERE a.artist_id = ? ORDER BY c.name COLLATE NOCASE", arrayOf(artistId.toString()), ::toTag)
         return genres to tags
     }
 

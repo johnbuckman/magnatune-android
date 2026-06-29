@@ -50,7 +50,7 @@ class PlaybackService : MediaSessionService() {
                 val host = dev?.host
                 android.util.Log.i("RAOP", "selected=${dev?.name} host=$host port=${dev?.port}")
                 if (dev != null && host != null) {
-                    container.airplayRouter.connect(host, dev.port, initialVolume = 1f) { ok ->
+                    container.airplayRouter.connect(host, dev.port, initialVolume = 0.7f) { ok -> // audible test level
                         main.post { if (ok) player.setAirPlayActive(true) }
                     }
                 } else {

@@ -138,7 +138,8 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             // edges instead of a few px short.
             val mascotH = 74.dp
             Box(
-                Modifier.fillMaxWidth().fullBleedWidth(8.dp).height(mascotH).offset(y = 0.dp).clipToBounds(),
+                Modifier.fillMaxWidth().fullBleedWidth(8.dp).height(mascotH).offset(y = 0.dp).clipToBounds()
+                    .clickable { nav.navigate(Routes.HELP) { popUpTo(Routes.POPULAR); launchSingleTop = true } },
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
                 androidx.compose.foundation.Image(
@@ -181,7 +182,7 @@ private fun NavRow(tab: NavTab, selected: Boolean, onClick: () -> Unit) {
 private fun ContentTopBar(nav: NavController) {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
-    val isTopLevel = route == null || NavTab.entries.any { it.route == route }
+    val isTopLevel = route == null || route == Routes.HELP || NavTab.entries.any { it.route == route }
     if (isTopLevel) return
     // iOS-style nav back: accent chevron + "Back", no filled bar.
     Row(
@@ -211,7 +212,16 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
             composable(Routes.SEARCH) { SearchScreen(vm, nav, onPlay) }
             composable(Routes.FAVORITES) { FavoritesScreen(vm, nav, onPlay) }
             composable(Routes.PLAYLISTS) { PlaylistsScreen(vm, nav, onPlay) }
-            composable(Routes.SETTINGS) { SettingsScreen(vm) }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(vm, onShowHelp = {
+                    nav.navigate(Routes.HELP) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                })
+            }
+            composable(Routes.HELP) {
+                com.magnatune.player.ui.screens.HelpScreen(onNavigate = { route ->
+                    nav.navigate(route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                })
+            }
             longArg(Routes.ARTIST) { ArtistDetailScreen(vm, nav, it, onPlay) }
             longArg(Routes.ALBUM) { AlbumDetailScreen(vm, nav, it, onPlay) }
             longArg(Routes.GENRE) { GenreDetailScreen(vm, nav, it) }

@@ -150,6 +150,7 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
     val albums by produceState(emptyList<Album>(), artistId) { value = vm.albumsForArtist(artistId) }
     val artistTracks by produceState(emptyList<PlayableTrack>(), artistId) { value = vm.playableForArtist(artistId) }
     val recArtists by produceState(emptyList<Artist>(), artistId) { value = vm.recommendedArtists(artistId) }
+    val chips by produceState<Pair<List<Genre>, List<Tag>>?>(null, artistId) { value = vm.genresAndTagsForArtist(artistId) }
     val a = artist ?: run { CenterLoading(); return }
     val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
@@ -173,6 +174,15 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
                 }
                 (a.bio ?: a.description)?.takeIf { it.isNotBlank() }?.let {
                     com.magnatune.player.ui.components.ExpandableText(it, modifier = Modifier.padding(top = 12.dp))
+                }
+                chips?.let { (genres, tags) ->
+                    if (genres.isNotEmpty() || tags.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            genres.forEach { g -> Chip(g.name) { nav.navigate(Routes.genre(g.id)) } }
+                            tags.forEach { t -> Chip(t.name) { nav.navigate(Routes.tag(t.id)) } }
+                        }
+                    }
                 }
             }
             HorizontalDivider()

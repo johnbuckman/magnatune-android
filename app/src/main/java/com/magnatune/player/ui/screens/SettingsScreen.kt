@@ -49,14 +49,14 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 }
 
 @Composable
-fun SettingsScreen(vm: MagnatuneViewModel) {
+fun SettingsScreen(vm: MagnatuneViewModel, onShowHelp: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         MembershipSection(vm)
         PlaybackSection(vm)
         if (vm.credentials.isMember.collectAsStateWithLifecycle().value) DownloadSection(vm)
         LibrarySection(vm)
         StorageSection(vm)
-        AboutSection()
+        AboutSection(onShowHelp)
     }
 }
 
@@ -161,7 +161,7 @@ private fun LibrarySection(vm: MagnatuneViewModel) {
 }
 
 @Composable
-private fun AboutSection() {
+private fun AboutSection(onShowHelp: () -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
     fun open(url: String) = context.startActivity(
         android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
@@ -171,5 +171,6 @@ private fun AboutSection() {
             OutlinedButton(onClick = { open("http://magnatune.com/info/whynotevil") }) { Text("Why not evil") }
             OutlinedButton(onClick = { open("http://magnatune.com/info/why") }) { Text("Founder's rant") }
         }
+        OutlinedButton(onClick = onShowHelp, modifier = Modifier.padding(top = 8.dp)) { Text("App Help") }
     }
 }

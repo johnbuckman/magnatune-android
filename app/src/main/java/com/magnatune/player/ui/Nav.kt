@@ -12,6 +12,7 @@ object Routes {
     const val FAVORITES = "favorites"
     const val PLAYLISTS = "playlists"
     const val SETTINGS = "settings"
+    const val HELP = "help"
 
     const val ARTIST = "artist/{id}"
     const val ALBUM = "album/{id}"
