@@ -10,6 +10,7 @@ data class Artist(
     val bio: String? = null,
     val photo: String? = null,
     val society: String? = null,
+    val page: String? = null,   // artist URL slug; safe — cursor maps by name, ignores if absent
 )
 
 data class Album(
