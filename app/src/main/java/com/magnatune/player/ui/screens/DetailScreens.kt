@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -27,8 +28,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +63,7 @@ private fun CenterLoading() {
 }
 
 @Composable
-fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long, onPlay: OnPlay) {
+fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long, onPlay: OnPlay, highlightSongId: Long? = null) {
     val data by produceState<Triple<Album, String, List<Song>>?>(null, albumId) {
         val album = vm.album(albumId) ?: return@produceState
         val artistName = vm.artist(album.artistId)?.name ?: ""
@@ -79,7 +85,21 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
     val recAlbums = recAlbumsRaw.filter { it.id !in supp.albums }
     val recNames by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    // Deep-linked from a search result: scroll the song into view and flash-highlight it (no
+    // auto-play). The header is LazyColumn item 0, so the song sits at its songs-index + 1.
+    val listState = rememberLazyListState()
+    var highlightedId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(highlightSongId, songs.size) {
+        val target = highlightSongId ?: return@LaunchedEffect
+        val sIdx = songs.indexOfFirst { it.id == target }
+        if (sIdx < 0) return@LaunchedEffect
+        listState.animateScrollToItem(sIdx + 1)
+        highlightedId = target
+        delay(2200)
+        highlightedId = null
+    }
+
+    LazyColumn(Modifier.fillMaxSize(), state = listState) {
         item {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
@@ -113,6 +133,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
             SongRow(song = song, isCurrent = current?.id == song.id, isPlaying = playing,
+                isHighlighted = highlightedId == song.id,
                 onClick = { onPlay(tracks, idx) },
                 trailing = {
                     tracks.getOrNull(idx)?.let { com.magnatune.player.ui.components.SongDownloadButton(vm, it) }

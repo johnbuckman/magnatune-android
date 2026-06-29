@@ -80,6 +80,7 @@ private fun iconFor(tab: NavTab): String = when (tab) {
     NavTab.POPULAR -> com.magnatune.player.ui.components.Fa.star
     NavTab.ARTISTS -> com.magnatune.player.ui.components.Fa.user
     NavTab.ALBUMS -> com.magnatune.player.ui.components.Fa.compactDisc
+    NavTab.SONGS -> com.magnatune.player.ui.components.Fa.music
     NavTab.GENRES -> com.magnatune.player.ui.components.Fa.guitar
     NavTab.TAGS -> com.magnatune.player.ui.components.Fa.tag
     NavTab.FEATURED -> com.magnatune.player.ui.components.Fa.rectangleList
@@ -206,6 +207,7 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
             composable(Routes.POPULAR) { PopularScreen(vm, nav) }
             composable(Routes.ARTISTS) { ArtistsScreen(vm, nav) }
             composable(Routes.ALBUMS) { AlbumsScreen(vm, nav) }
+            composable(Routes.SONGS) { com.magnatune.player.ui.screens.SongsScreen(vm, nav, onPlay) }
             composable(Routes.GENRES) { GenresScreen(vm, nav) }
             composable(Routes.TAGS) { TagsScreen(vm, nav) }
             composable(Routes.FEATURED) { FeaturedScreen(vm, nav) }
@@ -223,7 +225,17 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
                 })
             }
             longArg(Routes.ARTIST) { ArtistDetailScreen(vm, nav, it, onPlay) }
-            longArg(Routes.ALBUM) { AlbumDetailScreen(vm, nav, it, onPlay) }
+            composable(
+                Routes.ALBUM,
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("song") { type = NavType.LongType; defaultValue = -1L },
+                ),
+            ) { entry ->
+                val id = entry.arguments?.getLong("id") ?: 0L
+                val song = entry.arguments?.getLong("song") ?: -1L
+                AlbumDetailScreen(vm, nav, id, onPlay, highlightSongId = song.takeIf { it > 0 })
+            }
             longArg(Routes.GENRE) { GenreDetailScreen(vm, nav, it) }
             longArg(Routes.TAG) { TagDetailScreen(vm, nav, it) }
             longArg(Routes.CATALOG_PLAYLIST) { CatalogPlaylistDetailScreen(vm, nav, it, onPlay) }
@@ -288,5 +300,9 @@ private fun NavBackStackEntry.concreteRoute(): String? {
     val pat = destination.route ?: return null
     if (!pat.contains("{id}")) return pat
     val id = arguments?.getLong("id") ?: return pat
-    return pat.replace("{id}", id.toString())
+    var r = pat.replace("{id}", id.toString())
+    // Drop the optional ?song=… highlight arg when persisting, so a relaunch reopens the album
+    // without re-flashing the song.
+    if (r.contains("?")) r = r.substringBefore("?")
+    return r
 }

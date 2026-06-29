@@ -77,6 +77,11 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun recommendedAlbums(albumId: Long) = io { recommendedAlbums(albumId) }
     suspend fun recommendedArtists(artistId: Long) = io { recommendedArtists(artistId) }
 
+    /** Song-title search for the dedicated Songs browse page (mirrors iOS SongsView). */
+    suspend fun searchSongsOnly(q: String): List<Song> = withContext(Dispatchers.IO) {
+        container.catalog.searchSongs(q, 200)
+    }
+
     suspend fun search(q: String): SearchResults = withContext(Dispatchers.IO) {
         val c = container.catalog
         SearchResults(c.searchArtists(q, 30), c.searchAlbums(q, 30), c.searchSongs(q, 60))

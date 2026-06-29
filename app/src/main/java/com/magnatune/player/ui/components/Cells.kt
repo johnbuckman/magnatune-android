@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,7 +128,12 @@ fun ArtistRow(artist: Artist, albumName: String?, onClick: () -> Unit, trailing:
     }
 }
 
-/** Song row: track no / artwork, name + optional subtitle, duration, trailing controls. */
+/** Song row: track no / artwork, name + optional subtitle, duration, trailing controls.
+ *
+ * Search-nav mode: pass [onAlbumClick] (and optionally [onArtistClick]). Then tapping the
+ * artwork / song name / album chip navigates to the album (with this song highlighted) and
+ * the artist chip navigates to the artist — instead of the whole row playing. [isHighlighted]
+ * briefly flashes the row (the song just deep-linked from search). */
 @Composable
 fun SongRow(
     song: Song,
@@ -136,25 +142,34 @@ fun SongRow(
     showArtwork: Boolean = false,
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
+    isHighlighted: Boolean = false,
+    onAlbumClick: (() -> Unit)? = null,
+    onArtistClick: (() -> Unit)? = null,
     onClick: () -> Unit,
     trailing: @Composable () -> Unit = {},
 ) {
-    val rowBg = if (isCurrent) MagAccent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent
+    val navMode = onAlbumClick != null
+    val rowBg = when {
+        isCurrent -> MagAccent.copy(alpha = 0.12f)
+        isHighlighted -> MagAccent.copy(alpha = 0.28f)
+        else -> androidx.compose.ui.graphics.Color.Transparent
+    }
     Row(
         modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(rowBg)
-            .clickable(onClick = onClick)
+            .let { if (navMode) it else it.clickable(onClick = onClick) }
             .padding(horizontal = 6.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val leadMod = if (navMode) Modifier.clickable(onClick = onAlbumClick!!) else Modifier
         if (isCurrent) {
             Box(Modifier.size(if (showArtwork) 40.dp else 26.dp), contentAlignment = Alignment.Center) {
                 FaIcon(if (isPlaying) Fa.volumeHigh else Fa.volumeLow, "Now playing", tint = MagAccent, size = 20.dp)
             }
         } else if (showArtwork && artistName != null && albumName != null) {
-            CoverImage(artistName, albumName, points = 40.dp, modifier = Modifier.size(40.dp))
+            CoverImage(artistName, albumName, points = 40.dp, modifier = Modifier.size(40.dp).then(leadMod))
         } else {
             Box(Modifier.size(if (showArtwork) 40.dp else 26.dp), contentAlignment = Alignment.Center) {
                 Text(song.trackNo?.toString() ?: "•", style = MaterialTheme.typography.bodyMedium, color = MagSecondary)
@@ -164,14 +179,41 @@ fun SongRow(
         Column(Modifier.weight(1f)) {
             Text(song.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isCurrent) MagAccent else MaterialTheme.colorScheme.onBackground)
-            if (artistName != null) {
+                color = if (isCurrent) MagAccent else MaterialTheme.colorScheme.onBackground,
+                modifier = if (navMode) Modifier.clickable(onClick = onAlbumClick!!) else Modifier)
+            if (navMode) {
+                // Tappable chips under the song name: artist → artist, album → album+highlight.
+                Spacer(Modifier.height(3.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (artistName != null && onArtistClick != null) SubChip(artistName, Fa.user, onArtistClick)
+                    if (albumName != null) SubChip(albumName, Fa.compactDisc, onAlbumClick!!)
+                }
+            } else if (artistName != null) {
                 Text(artistName, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Text(song.durationText, style = MaterialTheme.typography.bodySmall, color = MagSecondary)
         trailing()
+    }
+}
+
+/** Small icon+label pill used for the artist / album links under a search song row. */
+@Composable
+private fun SubChip(text: String, glyph: String, onClick: () -> Unit) {
+    Surface(
+        color = MagCard, shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FaIcon(glyph, null, tint = MagSecondary, size = 11.dp)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

@@ -5,6 +5,7 @@ object Routes {
     const val POPULAR = "popular"
     const val ARTISTS = "artists"
     const val ALBUMS = "albums"
+    const val SONGS = "songs"
     const val GENRES = "genres"
     const val TAGS = "tags"
     const val FEATURED = "featured"
@@ -15,7 +16,7 @@ object Routes {
     const val HELP = "help"
 
     const val ARTIST = "artist/{id}"
-    const val ALBUM = "album/{id}"
+    const val ALBUM = "album/{id}?song={song}"
     const val GENRE = "genre/{id}"
     const val TAG = "tag/{id}"
     const val CATALOG_PLAYLIST = "cplaylist/{id}"
@@ -23,6 +24,8 @@ object Routes {
 
     fun artist(id: Long) = "artist/$id"
     fun album(id: Long) = "album/$id"
+    /** Open an album and scroll-to / highlight one song (e.g. from a search result). */
+    fun albumSong(albumId: Long, songId: Long) = "album/$albumId?song=$songId"
     fun genre(id: Long) = "genre/$id"
     fun tag(id: Long) = "tag/$id"
     fun catalogPlaylist(id: Long) = "cplaylist/$id"
@@ -34,6 +37,7 @@ enum class NavTab(val route: String, val title: String, val icon: String) {
     POPULAR(Routes.POPULAR, "Popular", "star"),
     ARTISTS(Routes.ARTISTS, "Artists", "person"),
     ALBUMS(Routes.ALBUMS, "Albums", "album"),
+    SONGS(Routes.SONGS, "Songs", "music"),
     GENRES(Routes.GENRES, "Genres", "category"),
     TAGS(Routes.TAGS, "Tags", "tag"),
     FEATURED(Routes.FEATURED, "Featured", "playlist"),

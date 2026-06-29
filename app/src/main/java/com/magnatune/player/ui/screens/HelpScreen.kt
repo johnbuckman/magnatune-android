@@ -63,7 +63,7 @@ fun HelpScreen(onNavigate: (String) -> Unit = {}) {
 /** Bolded words that name a navigable section -> its route. */
 private val helpRoutes: Map<String, String> = mapOf(
     "Popular" to Routes.POPULAR, "Artists" to Routes.ARTISTS, "Albums" to Routes.ALBUMS,
-    "Genres" to Routes.GENRES, "Tags" to Routes.TAGS, "Featured" to Routes.FEATURED,
+    "Songs" to Routes.SONGS, "Genres" to Routes.GENRES, "Tags" to Routes.TAGS, "Featured" to Routes.FEATURED,
     "Search" to Routes.SEARCH, "Favorites" to Routes.FAVORITES, "Playlists" to Routes.PLAYLISTS,
     "Settings" to Routes.SETTINGS,
 )
@@ -110,7 +110,7 @@ private val helpSections: List<HSection> = listOf(
     HSection("Finding your way around", listOf(
         HText("On a tablet the sections live in the sidebar on the left. On a phone they're in the bar at the bottom."),
         HBullet("**Popular** — the most-loved albums, grouped by genre."),
-        HBullet("**Artists**, **Albums** — browse the whole catalog."),
+        HBullet("**Artists**, **Albums**, **Songs** — browse the whole catalog."),
         HBullet("**Genres** — pick a style, then drill into its artists and albums."),
         HBullet("**Tags** — albums grouped by mood and theme (“Tagged as…”)."),
         HBullet("**Featured** — playlists hand-curated by Magnatune."),

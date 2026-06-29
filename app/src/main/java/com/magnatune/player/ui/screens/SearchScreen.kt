@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,9 +27,12 @@ import com.magnatune.player.ui.Routes
 import com.magnatune.player.ui.SearchResults
 import com.magnatune.player.ui.components.ArtistRow
 import com.magnatune.player.ui.components.CoverImage
+import com.magnatune.player.ui.components.Fa
+import com.magnatune.player.ui.components.FaIcon
 import com.magnatune.player.ui.components.FavoriteButton
 import com.magnatune.player.ui.components.SectionHeader
 import com.magnatune.player.ui.components.SongRow
+import com.magnatune.player.ui.theme.MagSecondary
 
 @Composable
 fun SearchScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
@@ -47,6 +51,14 @@ fun SearchScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
             value = query, onValueChange = { query = it },
             placeholder = { Text("Search artists, albums, songs") },
             singleLine = true,
+            leadingIcon = { FaIcon(Fa.magnifyingGlass, null, tint = MagSecondary, size = 16.dp) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { query = "" }) {
+                        FaIcon(Fa.xmark, "Clear search", tint = MagSecondary, size = 16.dp)
+                    }
+                }
+            },
             modifier = Modifier.fillMaxWidth().padding(12.dp),
         )
         val r = results?.let {
@@ -75,10 +87,15 @@ fun SearchScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
                 if (r.songs.isNotEmpty()) {
                     item { SectionHeader("Songs") }
                     itemsIndexed(r.songs, key = { _, s -> "s${s.id}" }) { idx, song ->
+                        val track = songTracks.getOrNull(idx)
+                        // Tapping the artwork / song name / album chip opens the album with this
+                        // song highlighted (no inline play); the artist chip → artist page.
                         SongRow(song = song,
-                            artistName = songTracks.getOrNull(idx)?.artistName,
-                            albumName = songTracks.getOrNull(idx)?.album?.name,
+                            artistName = track?.artistName,
+                            albumName = track?.album?.name,
                             showArtwork = true,
+                            onAlbumClick = track?.let { t -> { nav.navigate(Routes.albumSong(t.album.id, song.id)) } },
+                            onArtistClick = track?.let { t -> { nav.navigate(Routes.artist(t.album.artistId)) } },
                             onClick = { if (songTracks.isNotEmpty()) onPlay(songTracks, idx) },
                             trailing = { FavoriteButton(vm, "song", song.id, compact = true) })
                     }
