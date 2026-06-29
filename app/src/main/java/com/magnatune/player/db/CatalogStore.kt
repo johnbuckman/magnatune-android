@@ -190,6 +190,27 @@ class CatalogStore(path: String) {
     fun catalogPlaylistIDsForSongs(songIDs: List<Long>) =
         distinctIDs(songIDs) { "SELECT DISTINCT playlist_id FROM playlist_songs WHERE song_id IN ($it)" }
 
+    // ---- Recommendations ("You might also like") ----
+    // Guarded: an older catalog (pre-recommendations table) returns empty instead of throwing.
+
+    fun recommendedAlbums(albumId: Long): List<Album> = runCatching {
+        query("SELECT a.* FROM recommendations r JOIN albums a ON a.album_id = r.recommended_album_id " +
+            "WHERE r.album_id = ? ORDER BY r.rank", arrayOf(albumId.toString()), ::toAlbum)
+    }.getOrDefault(emptyList())
+
+    /** Aggregate the per-album recs across all the artist's albums, tally the most-recommended
+     *  OTHER artists (one vote per rec), drop the artist itself. */
+    fun recommendedArtists(artistId: Long, limit: Int = 16): List<Artist> = runCatching {
+        query(
+            "SELECT ar.* FROM recommendations r " +
+                "JOIN albums ra ON ra.album_id = r.recommended_album_id " +
+                "JOIN artists ar ON ar.artists_id = ra.artist_id " +
+                "WHERE r.album_id IN (SELECT album_id FROM albums WHERE artist_id = ?) " +
+                "AND ra.artist_id <> ? " +
+                "GROUP BY ar.artists_id ORDER BY COUNT(*) DESC, ar.name COLLATE NOCASE LIMIT ?",
+            arrayOf(artistId.toString(), artistId.toString(), limit.toString()), ::toArtist)
+    }.getOrDefault(emptyList())
+
     // ---- Playback context ----
     fun makePlayable(songs: List<Song>): List<PlayableTrack> {
         val albumCache = HashMap<Long, Album>()

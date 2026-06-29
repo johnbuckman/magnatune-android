@@ -50,6 +50,8 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun albumsForTag(id: Long) = io { albumsForTag(id) }
     suspend fun songsForCatalogPlaylist(id: Long) = io { songsForCatalogPlaylist(id) }
     suspend fun genresAndTags(albumId: Long) = io { genresAndTags(albumId) }
+    suspend fun recommendedAlbums(albumId: Long) = io { recommendedAlbums(albumId) }
+    suspend fun recommendedArtists(artistId: Long) = io { recommendedArtists(artistId) }
 
     suspend fun search(q: String): SearchResults = withContext(Dispatchers.IO) {
         val c = container.catalog

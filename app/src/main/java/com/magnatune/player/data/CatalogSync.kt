@@ -23,6 +23,10 @@ class CatalogSync(private val context: Context) {
         const val DB_GZ_URL = "http://he3.magnatune.com/info/sqlite_normalized.db.gz"
         private const val CRC_KEY = "catalog.crc"
         private const val LAST_CHECK_KEY = "catalog.lastCheck"
+        private const val SEED_VERSION_KEY = "catalog.seedVersion"
+        // Bump whenever assets/magnatune.db changes so a stale on-disk catalog is re-seeded even
+        // when the published changed.txt CRC hasn't moved (v2 = added the recommendations table).
+        private const val SEED_VERSION = 2
         private const val DB_NAME = "magnatune_catalog.db"
 
         fun catalogFile(context: Context) = File(context.filesDir, DB_NAME)
@@ -30,14 +34,18 @@ class CatalogSync(private val context: Context) {
 
     fun catalogPath(): String = catalogFile(context).path
 
-    /** Ensure a catalog exists at the target path, seeding from the bundled asset if needed. */
+    /** Ensure a catalog exists at the target path, seeding from the bundled asset on first launch
+     *  AND whenever the app bundles a newer seed ([SEED_VERSION] bumped) — so a stale on-disk
+     *  catalog is replaced even if the published CRC hasn't moved. Clears the stored CRC after
+     *  re-seeding so the next online refresh re-evaluates against the live db. */
     fun ensureSeeded() {
         val target = catalogFile(context)
-        if (target.exists()) return
+        if (target.exists() && prefs.getInt(SEED_VERSION_KEY, 0) == SEED_VERSION) return
         runCatching {
             context.assets.open("magnatune.db").use { input ->
                 target.outputStream().use { input.copyTo(it) }
             }
+            prefs.edit().putInt(SEED_VERSION_KEY, SEED_VERSION).remove(CRC_KEY).apply()
         }
     }
 

@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -69,6 +71,8 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
     val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
     val albumNowPlaying = current?.album?.id == album.id
+    val recAlbums by produceState(emptyList<Album>(), albumId) { value = vm.recommendedAlbums(albumId) }
+    val recNames by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
 
     LazyColumn(Modifier.fillMaxSize()) {
         item {
@@ -114,6 +118,21 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                     FavoriteButton(vm, "song", song.id, compact = true)
                 })
         }
+        if (recAlbums.isNotEmpty()) {
+            item {
+                com.magnatune.player.ui.components.SectionHeader("You might also like")
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    items(recAlbums, key = { it.id }) { rec ->
+                        com.magnatune.player.ui.components.AlbumCell(
+                            rec, recNames?.get(rec.artistId) ?: "",
+                            onClick = { nav.navigate(Routes.album(rec.id)) }, modifier = Modifier.width(150.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -133,6 +152,7 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
     val firstAlbum by produceState<String?>(null, artistId) { value = vm.firstAlbumName(artistId) }
     val albums by produceState(emptyList<Album>(), artistId) { value = vm.albumsForArtist(artistId) }
     val artistTracks by produceState(emptyList<PlayableTrack>(), artistId) { value = vm.playableForArtist(artistId) }
+    val recArtists by produceState(emptyList<Artist>(), artistId) { value = vm.recommendedArtists(artistId) }
     val a = artist ?: run { CenterLoading(); return }
     val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
@@ -164,6 +184,32 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
         itemsIndexed(albums, key = { _, al -> al.id }) { _, album ->
             SongRowAlbumEntry(vm, album, a.name) { nav.navigate(Routes.album(album.id)) }
         }
+        if (recArtists.isNotEmpty()) {
+            item {
+                com.magnatune.player.ui.components.SectionHeader("You might also like")
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    items(recArtists, key = { it.id }) { other ->
+                        ArtistRecCell(other) { nav.navigate(Routes.artist(other.id)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Compact circular artist cell for the artist-page "You might also like" row. */
+@Composable
+private fun ArtistRecCell(artist: Artist, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.width(96.dp).clickableNav(onClick).padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        com.magnatune.player.ui.components.ArtistPhoto(artist.name, null, artist.photo, points = 80.dp)
+        Spacer(Modifier.size(6.dp))
+        Text(artist.name, style = MaterialTheme.typography.bodySmall, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MagSecondary)
     }
 }
 
