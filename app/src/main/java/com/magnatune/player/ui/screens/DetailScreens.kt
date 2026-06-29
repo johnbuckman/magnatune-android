@@ -65,13 +65,18 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
     }
     val chips by produceState<Pair<List<Genre>, List<Tag>>?>(null, albumId) { value = vm.genresAndTags(albumId) }
     val d = data ?: run { CenterLoading(); return }
-    val (album, artistName, songs) = d
-    val tracks by produceState(emptyList<PlayableTrack>(), albumId) { value = vm.playableForAlbum(albumId) }
+    val (album, artistName, allSongs) = d
+    val allTracks by produceState(emptyList<PlayableTrack>(), albumId) { value = vm.playableForAlbum(albumId) }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    // Hide disliked-genre songs; keep songs + tracks parallel so play indices stay aligned.
+    val songs = allSongs.filter { it.id !in supp.songs }
+    val tracks = allTracks.filter { it.song.id !in supp.songs }
 
     val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
     val albumNowPlaying = current?.album?.id == album.id
-    val recAlbums by produceState(emptyList<Album>(), albumId) { value = vm.recommendedAlbums(albumId) }
+    val recAlbumsRaw by produceState(emptyList<Album>(), albumId) { value = vm.recommendedAlbums(albumId) }
+    val recAlbums = recAlbumsRaw.filter { it.id !in supp.albums }
     val recNames by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
 
     LazyColumn(Modifier.fillMaxSize()) {
@@ -147,10 +152,14 @@ private fun PlayButton(nowPlaying: Boolean, onClick: () -> Unit) {
 fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Long, onPlay: OnPlay) {
     val artist by produceState<Artist?>(null, artistId) { value = vm.artist(artistId) }
     val firstAlbum by produceState<String?>(null, artistId) { value = vm.firstAlbumName(artistId) }
-    val albums by produceState(emptyList<Album>(), artistId) { value = vm.albumsForArtist(artistId) }
-    val artistTracks by produceState(emptyList<PlayableTrack>(), artistId) { value = vm.playableForArtist(artistId) }
-    val recArtists by produceState(emptyList<Artist>(), artistId) { value = vm.recommendedArtists(artistId) }
+    val albumsRaw by produceState(emptyList<Album>(), artistId) { value = vm.albumsForArtist(artistId) }
+    val artistTracksRaw by produceState(emptyList<PlayableTrack>(), artistId) { value = vm.playableForArtist(artistId) }
+    val recArtistsRaw by produceState(emptyList<Artist>(), artistId) { value = vm.recommendedArtists(artistId) }
     val chips by produceState<Pair<List<Genre>, List<Tag>>?>(null, artistId) { value = vm.genresAndTagsForArtist(artistId) }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    val albums = albumsRaw.filter { it.id !in supp.albums }
+    val artistTracks = artistTracksRaw.filter { it.song.id !in supp.songs }
+    val recArtists = recArtistsRaw.filter { it.id !in supp.artists }
     val a = artist ?: run { CenterLoading(); return }
     val current by vm.playback.currentTrack.collectAsStateWithLifecycle()
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
@@ -233,10 +242,12 @@ private fun SongRowAlbumEntry(vm: MagnatuneViewModel, album: Album, artistName: 
 @Composable
 fun CatalogPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlistId: Long, onPlay: OnPlay) {
     val songs by produceState<List<Song>?>(null, playlistId) { value = vm.songsForCatalogPlaylist(playlistId) }
-    val tracks by produceState(emptyList<PlayableTrack>(), playlistId) {
+    val tracksRaw by produceState(emptyList<PlayableTrack>(), playlistId) {
         value = vm.playable(vm.songsForCatalogPlaylist(playlistId))
     }
-    val list = songs ?: run { CenterLoading(); return }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    val list = songs?.filter { it.id !in supp.songs } ?: run { CenterLoading(); return }
+    val tracks = tracksRaw.filter { it.song.id !in supp.songs }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Button(onClick = { onPlay(tracks, 0) }, modifier = Modifier.padding(16.dp)) {

@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -36,9 +37,11 @@ fun SearchScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
         value = if (query.length < 2) null else vm.search(query)
     }
     val names by produceState<Map<Long, String>?>(null) { value = vm.artistNames() }
-    val songTracks by produceState(emptyList<PlayableTrack>(), results) {
+    val songTracksRaw by produceState(emptyList<PlayableTrack>(), results) {
         value = results?.songs?.let { vm.playable(it) } ?: emptyList()
     }
+    val supp by vm.suppression.collectAsStateWithLifecycle()
+    val songTracks = songTracksRaw.filter { it.song.id !in supp.songs }
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = query, onValueChange = { query = it },
@@ -46,7 +49,13 @@ fun SearchScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(12.dp),
         )
-        val r = results
+        val r = results?.let {
+            SearchResults(
+                it.artists.filter { a -> a.id !in supp.artists },
+                it.albums.filter { al -> al.id !in supp.albums },
+                it.songs.filter { s -> s.id !in supp.songs },
+            )
+        }
         if (r != null) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (r.artists.isNotEmpty()) {
