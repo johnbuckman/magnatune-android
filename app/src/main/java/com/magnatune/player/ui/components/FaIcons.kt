@@ -39,6 +39,7 @@ object Fa {
     const val prev = ""            // backward-step
     const val shuffle = ""
     const val repeat = "\uF363"     // fa-repeat
+    const val penToSquare = "\uF044" // fa-pen-to-square (rename / edit)
     const val volumeHigh = ""
     const val volumeLow = ""
     const val volumeOff = ""       // volume-xmark

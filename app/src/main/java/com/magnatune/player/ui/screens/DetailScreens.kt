@@ -99,16 +99,27 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
         highlightedId = null
     }
 
+    var showCover by remember { mutableStateOf(false) }
+    if (showCover) {
+        val (hi, lo) = com.magnatune.player.ui.components.coverFullScreenUrls(artistName, album.name)
+        com.magnatune.player.ui.components.FullScreenImage(hi, lo) { showCover = false }
+    }
+
     LazyColumn(Modifier.fillMaxSize(), state = listState) {
         item {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
-                    CoverImage(artistName, album.name, points = 160.dp, modifier = Modifier.size(160.dp), cap = 600)
+                    CoverImage(artistName, album.name, points = 160.dp, modifier = Modifier.size(160.dp), cap = 600,
+                        onClick = { showCover = true })
                     Spacer(Modifier.size(16.dp))
                     Column {
                         Text(album.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary,
                             modifier = Modifier.padding(top = 2.dp).clickableNav { nav.navigate(Routes.artist(album.artistId)) })
+                        formatReleaseDate(album.releaseDate)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
+                                modifier = Modifier.padding(top = 4.dp))
+                        }
                         Row(modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(albumNowPlaying && playing) { onPlay(tracks, 0) }
@@ -186,11 +197,19 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
     val playing by vm.playback.isPlaying.collectAsStateWithLifecycle()
     val artistNowPlaying = current?.album?.artistId == artistId
 
+    var showPhoto by remember { mutableStateOf(false) }
+    if (showPhoto) {
+        val (hi, lo) = com.magnatune.player.ui.components.artistFullScreenUrls(a.name, firstAlbum, a.photo)
+        if (hi.isNotEmpty()) com.magnatune.player.ui.components.FullScreenImage(hi, lo) { showPhoto = false }
+        else showPhoto = false
+    }
+
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
-                    com.magnatune.player.ui.components.ArtistPhoto(a.name, firstAlbum, a.photo, points = 120.dp)
+                    com.magnatune.player.ui.components.ArtistPhoto(a.name, firstAlbum, a.photo, points = 120.dp,
+                        onClick = { showPhoto = true })
                     Spacer(Modifier.size(16.dp))
                     Column {
                         Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -287,3 +306,11 @@ fun CatalogPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, play
 
 private fun Modifier.clickableNav(onClick: () -> Unit): Modifier =
     this.clickable { onClick() }
+
+/** Format the album release date (epoch SECONDS) as an abbreviated date, e.g. "Jan 5, 2020",
+ *  matching iOS's `.formatted(date: .abbreviated, time: .omitted)`. Null/0 → no date. */
+private fun formatReleaseDate(epochSeconds: Long?): String? {
+    val secs = epochSeconds?.takeIf { it > 0 } ?: return null
+    val fmt = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+    return fmt.format(java.util.Date(secs * 1000))
+}

@@ -33,6 +33,7 @@ class CatalogStore(path: String) {
         id = c.long("artists_id"), name = c.str("name"),
         description = c.strOrNull("description"), homepage = c.strOrNull("homepage"),
         bio = c.strOrNull("bio"), photo = c.strOrNull("photo"), society = c.strOrNull("society"),
+        page = c.strOrNull("page"),
     )
 
     private fun toAlbum(c: Cursor) = Album(
@@ -114,6 +115,18 @@ class CatalogStore(path: String) {
         "SELECT DISTINCT ar.* FROM artists ar JOIN albums a ON a.artist_id = ar.artists_id " +
             "JOIN genres_albums ga ON ga.album_id = a.album_id WHERE ga.genre_id = ? " +
             "ORDER BY ar.name COLLATE NOCASE", arrayOf(genreId.toString()), ::toArtist)
+
+    /** The set of artist ids that have at least one album in the given genre. Used by the
+     *  Artists-browse genre filter ("an artist is in a genre if they have an album in it"). */
+    fun artistIdsForGenre(genreId: Long): Set<Long> = query(
+        "SELECT DISTINCT a.artist_id AS aid FROM albums a " +
+            "JOIN genres_albums ga ON ga.album_id = a.album_id WHERE ga.genre_id = ?",
+        arrayOf(genreId.toString())) { it.long("aid") }.toSet()
+
+    /** The set of album ids in the given genre. Used by the Albums-browse genre filter. */
+    fun albumIdsForGenre(genreId: Long): Set<Long> = query(
+        "SELECT ga.album_id AS aid FROM genres_albums ga WHERE ga.genre_id = ?",
+        arrayOf(genreId.toString())) { it.long("aid") }.toSet()
 
     /** Newest albums across one or more genres (Popular page's per-genre rows). */
     fun newReleases(genreIDs: List<Long>, limit: Int = 15): List<Album> {
@@ -210,6 +223,13 @@ class CatalogStore(path: String) {
 
     fun genreIDsForAlbums(albumIDs: List<Long>) =
         distinctIDs(albumIDs) { "SELECT DISTINCT genre_id FROM genres_albums WHERE album_id IN ($it)" }
+    /** Distinct genre ids represented by the given artists (via their albums). Used to build the
+     *  search-aware genre picker options on the Artists browse screen. */
+    fun genreIDsForArtists(artistIDs: List<Long>) =
+        distinctIDs(artistIDs) {
+            "SELECT DISTINCT ga.genre_id FROM genres_albums ga " +
+                "JOIN albums a ON a.album_id = ga.album_id WHERE a.artist_id IN ($it)"
+        }
     fun tagIDsForAlbums(albumIDs: List<Long>) =
         distinctIDs(albumIDs) { "SELECT DISTINCT collection_id FROM collections_albums WHERE album_id IN ($it)" }
     fun catalogPlaylistIDsForSongs(songIDs: List<Long>) =

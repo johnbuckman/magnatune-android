@@ -74,6 +74,8 @@ class UserStore(private val dao: UserDao, private val scope: CoroutineScope) {
 
     // Playlists
     suspend fun createPlaylist(name: String): Long = dao.insertPlaylist(PlaylistEntity(name = name, createdAt = now()))
+    suspend fun renamePlaylist(id: Long, name: String) = dao.renamePlaylist(id, name)
+    suspend fun playlistName(id: Long): String? = dao.playlistName(id)
     suspend fun deletePlaylist(id: Long) { dao.deletePlaylistItems(id); dao.deletePlaylist(id) }
     suspend fun addSong(songId: Long, toPlaylist: Long) =
         dao.insertItem(PlaylistItem(playlistId = toPlaylist, songId = songId, position = dao.nextPosition(toPlaylist)))

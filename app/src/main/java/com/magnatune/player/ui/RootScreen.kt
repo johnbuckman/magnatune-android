@@ -124,9 +124,18 @@ private fun NavSidebar(nav: NavController, modifier: Modifier = Modifier) {
             androidx.compose.foundation.layout.Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 8.dp),
             ) {
-                NavTab.entries.filter { it != NavTab.SETTINGS }.forEach { tab ->
-                    NavRow(tab, current == tab.route) {
-                        nav.navigate(tab.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                // Grouped + ordered like the OSX/web sidebar: Browse, gap, Library, gap, Search.
+                val navGroups = listOf(
+                    listOf(NavTab.POPULAR, NavTab.ARTISTS, NavTab.ALBUMS, NavTab.GENRES, NavTab.TAGS, NavTab.FEATURED, NavTab.SONGS),
+                    listOf(NavTab.FAVORITES, NavTab.PLAYLISTS),
+                    listOf(NavTab.SEARCH),
+                )
+                navGroups.forEachIndexed { i, group ->
+                    if (i > 0) Spacer(Modifier.height(14.dp))
+                    group.forEach { tab ->
+                        NavRow(tab, current == tab.route) {
+                            nav.navigate(tab.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                        }
                     }
                 }
             }
@@ -167,7 +176,7 @@ private fun NavRow(tab: NavTab, selected: Boolean, onClick: () -> Unit) {
             .background(if (selected) com.magnatune.player.ui.theme.MagAccent.copy(alpha = 0.14f)
                        else androidx.compose.ui.graphics.Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         com.magnatune.player.ui.components.FaIcon(iconFor(tab), null,
             tint = if (selected) com.magnatune.player.ui.theme.MagAccent else com.magnatune.player.ui.theme.MagSecondary,

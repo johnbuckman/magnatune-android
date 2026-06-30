@@ -63,6 +63,40 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun allTags() = io { allTags() }
     suspend fun catalogPlaylists() = io { catalogPlaylists() }
 
+    // ---- genre filtering for the Artists/Albums browse screens ----
+    /** Artist ids that have an album in the given genre (an artist is "in" a genre if they have
+     *  an album in it). Drives the Artists-browse genre filter. */
+    suspend fun artistIdsForGenre(genreId: Long) = io { artistIdsForGenre(genreId) }
+    /** Album ids in the given genre. Drives the Albums-browse genre filter. */
+    suspend fun albumIdsForGenre(genreId: Long) = io { albumIdsForGenre(genreId) }
+
+    /** Genres represented among the given artists (by their albums). For the search-aware picker. */
+    suspend fun genreIdsForArtists(artistIds: List<Long>): Set<Long> = withContext(Dispatchers.IO) {
+        container.catalog.genreIDsForArtists(artistIds)
+    }
+    /** Genres represented among the given albums. For the search-aware picker. */
+    suspend fun genreIdsForAlbums(albumIds: List<Long>): Set<Long> = withContext(Dispatchers.IO) {
+        container.catalog.genreIDsForAlbums(albumIds)
+    }
+
+    // ---- per-row counts (exclude disliked items so the count matches what's shown) ----
+    /** Album count per genre id. Excludes albums hidden by "Hide things I dislike" (so the count
+     *  matches the visible list); when the toggle is off, suppression is empty → full totals. */
+    suspend fun albumCountByGenre(): Map<Long, Int> = withContext(Dispatchers.IO) {
+        val hidden = suppression.value.albums
+        allGenres().associate { g -> g.id to albumsForGenre(g.id).count { it.id !in hidden } }
+    }
+    /** Album count per tag id, excluding disliked albums. */
+    suspend fun albumCountByTag(): Map<Long, Int> = withContext(Dispatchers.IO) {
+        val hidden = suppression.value.albums
+        allTags().associate { t -> t.id to albumsForTag(t.id).count { it.id !in hidden } }
+    }
+    /** Track count per Featured (catalog) playlist id, excluding disliked songs. */
+    suspend fun trackCountByCatalogPlaylist(): Map<Long, Int> = withContext(Dispatchers.IO) {
+        val hidden = suppression.value.songs
+        catalogPlaylists().associate { pl -> pl.id to songsForCatalogPlaylist(pl.id).count { it.id !in hidden } }
+    }
+
     suspend fun artist(id: Long) = io { artist(id) }
     suspend fun albumsForArtist(id: Long) = io { albumsForArtist(id) }
     suspend fun firstAlbumName(artistId: Long) = io { firstAlbumName(artistId) }
@@ -156,6 +190,16 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
         userStore.favoriteSongIds.value.mapNotNull { container.catalog.song(it) }
     }
 
+    /** Playable tracks for every song across the given albums (in album then track order).
+     *  Used by the Favorites "Albums" section Play-all. */
+    suspend fun playableForAlbums(albumIds: List<Long>): List<PlayableTrack> = io {
+        makePlayable(albumIds.flatMap { songsForAlbum(it) })
+    }
+    /** Playable tracks for every song across the given artists. Used by Favorites "Artists" Play-all. */
+    suspend fun playableForArtists(artistIds: List<Long>): List<PlayableTrack> = io {
+        makePlayable(artistIds.flatMap { songsForArtist(it) })
+    }
+
     /** Expand a favorite/target into its song ids (song→itself, album→its songs, artist→all songs). */
     suspend fun songIdsFor(kind: String, id: Long): List<Long> = withContext(Dispatchers.IO) {
         when (kind) {
@@ -171,6 +215,10 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
         val id = userStore.createPlaylist(name); onCreated(id)
     }
     fun deletePlaylist(id: Long) = viewModelScope.launch { userStore.deletePlaylist(id) }
+    fun renamePlaylist(id: Long, name: String) = viewModelScope.launch {
+        val trimmed = name.trim()
+        if (trimmed.isNotEmpty()) userStore.renamePlaylist(id, trimmed)
+    }
     fun addToPlaylist(playlistId: Long, kind: String, id: Long) = viewModelScope.launch {
         songIdsFor(kind, id).forEach { userStore.addSong(it, playlistId) }
     }

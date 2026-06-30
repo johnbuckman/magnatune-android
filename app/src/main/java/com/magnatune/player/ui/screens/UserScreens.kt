@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -59,6 +60,13 @@ fun FavoritesScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
     val songs = songsRaw.filter { it.id !in supp.songs }
     val songTracks = songTracksRaw.filter { it.song.id !in supp.songs }
 
+    // Per-section Play-all queues (all songs across the favorite artists / albums), with disliked
+    // songs filtered out so playback matches the visible list.
+    val artistTracksRaw by produceState(emptyList<PlayableTrack>(), artists) { value = vm.playableForArtists(artists.map { it.id }) }
+    val albumTracksRaw by produceState(emptyList<PlayableTrack>(), albums) { value = vm.playableForAlbums(albums.map { it.id }) }
+    val artistTracks = artistTracksRaw.filter { it.song.id !in supp.songs }
+    val albumTracks = albumTracksRaw.filter { it.song.id !in supp.songs }
+
     if (artists.isEmpty() && albums.isEmpty() && songs.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No favorites yet — tap the heart on any song, album, or artist.", color = MagSecondary,
@@ -68,20 +76,20 @@ fun FavoritesScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
     }
     LazyColumn(Modifier.fillMaxSize()) {
         if (artists.isNotEmpty()) {
-            item { SectionHeader("Artists") }
+            item { SectionHeaderWithPlayAll("Artists") { if (artistTracks.isNotEmpty()) onPlay(artistTracks, 0) } }
             items(artists, key = { "ar${it.id}" }) { a ->
                 ArtistRow(a, albumName = null, onClick = { nav.navigate(Routes.artist(a.id)) },
                     trailing = { FavoriteButton(vm, "artist", a.id, compact = true) })
             }
         }
         if (albums.isNotEmpty()) {
-            item { SectionHeader("Albums") }
+            item { SectionHeaderWithPlayAll("Albums") { if (albumTracks.isNotEmpty()) onPlay(albumTracks, 0) } }
             items(albums, key = { "al${it.id}" }) { al ->
                 AlbumListRow(al, names?.get(al.artistId) ?: "") { nav.navigate(Routes.album(al.id)) }
             }
         }
         if (songs.isNotEmpty()) {
-            item { SectionHeader("Songs") }
+            item { SectionHeaderWithPlayAll("Songs") { if (songTracks.isNotEmpty()) onPlay(songTracks, 0) } }
             itemsIndexed(songs, key = { _, s -> "s${s.id}" }) { idx, song ->
                 SongRow(song, artistName = songTracks.getOrNull(idx)?.artistName,
                     albumName = songTracks.getOrNull(idx)?.album?.name, showArtwork = true,
@@ -91,6 +99,22 @@ fun FavoritesScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
                         FavoriteButton(vm, "song", song.id, compact = true)
                     })
             }
+        }
+    }
+}
+
+/** Section header with a trailing Play-all action, used on the Favorites sections. Matches the
+ *  UserPlaylistDetailScreen play-all (Fa.play + "Play all"). */
+@Composable
+private fun SectionHeaderWithPlayAll(title: String, onPlayAll: () -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { SectionHeader(title) }
+        androidx.compose.material3.TextButton(onClick = onPlayAll) {
+            com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 14.dp)
+            Text("  Play all")
         }
     }
 }
@@ -123,18 +147,36 @@ fun PlaylistsScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
 @Composable
 fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlistId: Long, onPlay: OnPlay) {
     val playlisted by vm.userStore.playlistedSongIds.collectAsStateWithLifecycle()
+    val playlists by vm.userStore.playlists.collectAsStateWithLifecycle()
     val songsRaw by produceState(emptyList<Song>(), playlistId, playlisted) { value = vm.songsInPlaylist(playlistId) }
     val tracksRaw by produceState(emptyList<PlayableTrack>(), songsRaw) { value = vm.playable(songsRaw) }
     val supp by vm.suppression.collectAsStateWithLifecycle()
     val songs = songsRaw.filter { it.id !in supp.songs }
     val tracks = tracksRaw.filter { it.song.id !in supp.songs }
+    val playlistName = playlists.firstOrNull { it.id == playlistId }?.name ?: ""
+
+    var renaming by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (renaming) {
+        RenamePlaylistDialog(current = playlistName, onDismiss = { renaming = false }) { newName ->
+            vm.renamePlaylist(playlistId, newName); renaming = false
+        }
+    }
 
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            androidx.compose.material3.Button(
-                onClick = { if (tracks.isNotEmpty()) onPlay(tracks, 0) },
-                modifier = Modifier.padding(16.dp),
-            ) { com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 16.dp); Text("  Play all") }
+            androidx.compose.foundation.layout.Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Button(onClick = { if (tracks.isNotEmpty()) onPlay(tracks, 0) }) {
+                    com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 16.dp); Text("  Play all")
+                }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                // Rename action — matches the create/delete playlist controls' icon-button style.
+                IconButton(onClick = { renaming = true }) {
+                    com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.penToSquare, "Rename playlist", size = 18.dp)
+                }
+            }
             HorizontalDivider()
         }
         itemsIndexed(songs, key = { _, s -> s.id }) { idx, song ->
@@ -148,4 +190,26 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
                 })
         }
     }
+}
+
+/** Rename dialog for a user playlist — a text field prefilled with the current name (mirrors iOS). */
+@Composable
+private fun RenamePlaylistDialog(current: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(current) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename playlist") },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = name, onValueChange = { name = it },
+                singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onRename(name) }, enabled = name.trim().isNotEmpty(),
+            ) { Text("Rename") }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

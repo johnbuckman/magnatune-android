@@ -95,6 +95,8 @@ interface UserDao {
         "LEFT JOIN playlist_item pi ON pi.playlist_id = p.id GROUP BY p.id ORDER BY p.created_at DESC")
     suspend fun playlists(): List<PlaylistSummary>
     @Insert suspend fun insertPlaylist(p: PlaylistEntity): Long
+    @Query("UPDATE playlist SET name = :name WHERE id = :id") suspend fun renamePlaylist(id: Long, name: String)
+    @Query("SELECT name FROM playlist WHERE id = :id") suspend fun playlistName(id: Long): String?
     @Query("DELETE FROM playlist WHERE id = :id") suspend fun deletePlaylist(id: Long)
     @Query("DELETE FROM playlist_item WHERE playlist_id = :id") suspend fun deletePlaylistItems(id: Long)
 
