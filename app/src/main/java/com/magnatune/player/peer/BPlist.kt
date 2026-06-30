@@ -19,8 +19,13 @@ object BPlist {
             flat.add(o)
             when (o) {
                 is Map<*, *> -> {
-                    val ks = IntArray(o.size); val vs = IntArray(o.size); var i = 0
-                    for ((k, v) in o) { ks[i] = collect(k.toString()); vs[i] = collect(v); i++ }
+                    // Match Apple's plistlib byte-for-byte: keys sorted, and ALL keys flattened
+                    // before ALL values. Apple's plist parsers binary-search sorted keys, so an
+                    // unsorted/interleaved layout makes them miss fields (e.g. shk/audioFormat).
+                    val entries = o.entries.sortedBy { it.key.toString() }
+                    val ks = IntArray(entries.size); val vs = IntArray(entries.size)
+                    for ((i, e) in entries.withIndex()) ks[i] = collect(e.key.toString())
+                    for ((i, e) in entries.withIndex()) vs[i] = collect(e.value)
                     dictRefs[idx] = ks to vs
                 }
                 is List<*> -> {

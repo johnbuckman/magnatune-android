@@ -48,9 +48,10 @@ class PlaybackService : MediaSessionService() {
         container.appScope.launch {
             container.airplay.selected.collect { dev ->
                 val host = dev?.host
-                android.util.Log.i("RAOP", "selected=${dev?.name} host=$host port=${dev?.port}")
                 if (dev != null && host != null) {
-                    container.airplayRouter.connect(host, dev.port, initialVolume = 0.7f) { ok -> // audible test level
+                    // Initial volume is a brief default; setAirPlayActive() immediately syncs the
+                    // device to the app's master volume via AirPlay2Session.setVolume().
+                    container.airplayRouter.connect(host, dev.port, initialVolume = 0.7f) { ok ->
                         main.post { if (ok) player.setAirPlayActive(true) }
                     }
                 } else {

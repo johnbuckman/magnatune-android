@@ -50,7 +50,7 @@ class AirPlay2Session(private val host: String, private val port: Int) {
         private const val SPF = 352
         private const val CHUNK_BYTES = SPF * 4           // 352 frames * 16-bit stereo
         private const val RING_BYTES = 44100 * 4 * 2      // ~2s jitter buffer
-        private const val START_RTP = 88200L
+        private const val START_RTP = 88200L   // exactly as the working Python prototype
     }
 
     @Volatile private var running = false
@@ -64,6 +64,8 @@ class AirPlay2Session(private val host: String, private val port: Int) {
     private lateinit var ctrlReadKey: ByteArray
     private lateinit var audioKey: ByteArray
     private var wc = 0L; private var rc = 0L
+    private val chLock = Object()   // serializes the encrypted RTSP channel (send+recv atomic)
+    private var sessionUrl = "*"     // RTSP session URL (set after SETUP), used by setVolume
     private var cseq = 0
 
     // PCM jitter buffer (fed by the tap)
@@ -138,7 +140,13 @@ class AirPlay2Session(private val host: String, private val port: Int) {
 
     fun setVolume(v: Float) {
         volume = v
-        if (running) runCatching { ereq("SET_PARAMETER", "volume: ${-30f + 30f * v}\r\n".toByteArray(), "text/parameters") }
+        // MUST run off the caller's thread: setVolume is invoked from the main thread, and doing
+        // socket I/O there throws NetworkOnMainThreadException mid-write — leaving a partial frame
+        // that corrupts the encrypted channel and makes the Sonos FIN. SET_PARAMETER also must
+        // target the session URL (not "*"). The chLock in ereq serializes against feedback/setup.
+        if (running) spawn("ap2-vol") {
+            runCatching { ereq("SET_PARAMETER", "volume: ${-30f + 30f * v}\r\n".toByteArray(), "text/parameters", sessionUrl) }
+        }
     }
 
     fun stop() {
@@ -177,6 +185,7 @@ class AirPlay2Session(private val host: String, private val port: Int) {
         }
         val sid = (SecureRandom().nextInt() .toLong() and 0xFFFFFFFFL).toString()
         val url = "rtsp://${s.localAddress.hostAddress}/$sid"
+        sessionUrl = url   // so setVolume() (called from the player thread) targets the session, not "*"
 
         // SETUP(session)
         val base = linkedMapOf<String, Any?>(
@@ -224,20 +233,20 @@ class AirPlay2Session(private val host: String, private val port: Int) {
         var seq = SecureRandom().nextInt() and 0xFFFF
         var rtp = START_RTP
         val curRtp = java.util.concurrent.atomic.AtomicLong(rtp)
+        val latencyFrames = 44100L   // device plays 1s behind head → 1s jitter margin (was 11025)
         val backlog = HashMap<Int, ByteArray>()
         val blk = Object()
 
-        // control sync every 1s
+        // control sync every 1s — explicit rtp↔NTP map (rtp small, NTP = real wall clock)
         spawn("ap2-sync") {
             var first = true
             while (running) {
                 val nt = ntpNow()
                 val h = ByteArray(20)
-                h[0] = if (first) 0x90.toByte() else 0x80.toByte(); h[1] = 0xd4.toByte()
-                h[2] = 0; h[3] = 7
-                putBE(h, 4, (curRtp.get() - 88200) and 0xFFFFFFFFL, 4)   // play ~2s behind send → device buffers 2s
-                System.arraycopy(nt, 0, h, 8, 8)
-                putBE(h, 16, curRtp.get() and 0xFFFFFFFFL, 4)
+                h[0] = if (first) 0x90.toByte() else 0x80.toByte(); h[1] = 0xd4.toByte(); h[2] = 0; h[3] = 7
+                putBE(h, 4, (curRtp.get() - latencyFrames) and 0xFFFFFFFFL, 4)   // rtp playing now (2s behind head)
+                System.arraycopy(nt, 0, h, 8, 8)                                 // NTP = now
+                putBE(h, 16, curRtp.get() and 0xFFFFFFFFL, 4)                    // rtp head
                 runCatching { ctrlSock.send(DatagramPacket(h, 20, dev, devCtrlPort)) }
                 first = false
                 try { Thread.sleep(1000) } catch (_: Exception) { break }
@@ -268,35 +277,41 @@ class AirPlay2Session(private val host: String, private val port: Int) {
 
         Log.i(TAG, "streaming audio to $dataPort")
         val chunk = ByteArray(CHUNK_BYTES)
+        val per = SPF.toDouble() / 44100.0
+        val lead = 2.0   // burst ~2s upfront for more jitter margin (was 1.0)
+        // Pace on the SAME nanoTime base that ntpNow() is anchored to, so the rtp timeline (cur) and
+        // the sync/timing NTP are perfectly locked and high-resolution (one clock, like Python).
+        val t0n = System.nanoTime()
         var pk = 0L
         var actr = 0L
-        // Pace at steady real-time so rtptime tracks the wall clock and stays consistent with the
-        // control-sync anchor; the ring (primed by ExoPlayer's startup burst) absorbs jitter.
-        val per = SPF.toDouble() / 44100.0
-        val t0 = System.nanoTime() / 1e9
         while (running) {
-            drain(chunk)
+            drain(chunk)   // live music from the tap
             val alac = pcmToAlacRaw(chunk)
             val hdr = ByteArray(12)
             hdr[0] = 0x80.toByte(); hdr[1] = if (pk == 0L) 0xe0.toByte() else 0x60.toByte()
             putBE(hdr, 2, (seq and 0xFFFF).toLong(), 2); putBE(hdr, 4, rtp and 0xFFFFFFFFL, 4); putBE(hdr, 8, scid, 4)
-            val aad = hdr.copyOfRange(4, 12)
-            val enc = chacha(true, audioKey, nonce(actr), alac, aad)
-            val pktBytes = ByteArray(hdr.size + enc.size + 8)
+            val enc = chacha(true, audioKey, nonce(actr), alac, hdr.copyOfRange(4, 12))
+            val pktBytes = ByteArray(12 + enc.size + 8)
             System.arraycopy(hdr, 0, pktBytes, 0, 12); System.arraycopy(enc, 0, pktBytes, 12, enc.size)
             for (i in 0 until 8) pktBytes[12 + enc.size + i] = ((actr shr (8 * i)) and 0xFF).toByte()
             runCatching { audioSock.send(DatagramPacket(pktBytes, pktBytes.size, dev, dataPort)) }
             synchronized(blk) { backlog[seq and 0xFFFF] = pktBytes; if (backlog.size > 1024) backlog.remove(backlog.keys.first()) }
-            if (pk % 250 == 0L) { var nz = 0; for (x in chunk) if (x.toInt() != 0) { nz = 1; break }; Log.i(TAG, "audio pk=$pk filled=$filled nonzero=$nz") }
             actr++; seq = (seq + 1) and 0xFFFF; rtp += SPF; curRtp.set(rtp); pk++
-            val dt = (t0 + pk * per) - System.nanoTime() / 1e9
-            if (dt > 0) try { Thread.sleep((dt * 1000).toLong()) } catch (_: InterruptedException) { break }
+            val dtNs = ((pk * per - lead) * 1e9).toLong() - (System.nanoTime() - t0n)   // stay ~lead s ahead
+            if (dtNs > 0) try { Thread.sleep(dtNs / 1_000_000L, (dtNs % 1_000_000L).toInt()) } catch (_: InterruptedException) { break }
         }
     }
 
+    // Real wall-clock NTP (epoch 1900) — what the working Python prototype + iOS senders send.
+    // HIGH RESOLUTION: currentTimeMillis is only 1ms-precise; the Sonos's NTP clock-sync needs
+    // sub-ms timestamps (RTT ~4ms) or it can't lock and tears the stream down after a few queries.
+    // So anchor the wall epoch once, then advance with nanoTime for nanosecond fractional precision.
+    private val clkAnchorMs = System.currentTimeMillis()
+    private val clkAnchorNano = System.nanoTime()
     private fun ntpNow(): ByteArray {
-        val t = System.currentTimeMillis() / 1000.0 + 2208988800.0
-        val secs = t.toLong(); val frac = ((t - secs) * 4294967296.0).toLong()
+        val nowUnixNs = clkAnchorMs * 1_000_000L + (System.nanoTime() - clkAnchorNano)
+        val secs = nowUnixNs / 1_000_000_000L + 2208988800L
+        val frac = ((nowUnixNs % 1_000_000_000L) shl 32) / 1_000_000_000L   // <1e9<<32 ≈ 4.3e18 < Long max
         val b = ByteArray(8); putBE(b, 0, secs and 0xFFFFFFFFL, 4); putBE(b, 4, frac and 0xFFFFFFFFL, 4); return b
     }
     private fun putBE(b: ByteArray, off: Int, v: Long, size: Int) {
@@ -383,11 +398,17 @@ class AirPlay2Session(private val host: String, private val port: Int) {
     /** Encrypted RTSP exchange; returns the response body. */
     private fun ereq(method: String, body: ByteArray, ctype: String?, uri: String = "*", extra: String = ""): ByteArray {
         val sb = StringBuilder("$method $uri RTSP/1.0\r\nCSeq: ${cseq++}\r\nUser-Agent: AirPlay/665.13.1\r\n" +
-            "DACP-ID: 0000000000000001\r\nActive-Remote: 1\r\n$extra")
+            "DACP-ID: 0000000000000001\r\nActive-Remote: 1\r\nClient-Instance: 0000000000000001\r\n$extra")
         if (ctype != null) sb.append("Content-Type: $ctype\r\n")
         sb.append("Content-Length: ${body.size}\r\n\r\n")
-        encSend(sb.toString().toByteArray() + body)
-        return encRecvMessage()
+        // Serialize ALL channel access — ereq is called from the connect thread, the feedback thread,
+        // and the player's setVolume thread. Without this lock concurrent frames interleave and the
+        // shared ChaCha wc/rc counters corrupt, so the Sonos gets a bad-nonce frame and FINs the
+        // connection (Python guards the same way with `with chlock:`).
+        synchronized(chLock) {
+            encSend(sb.toString().toByteArray() + body)
+            return encRecvMessage()
+        }
     }
     private fun encSend(plain: ByteArray) {
         val out = sock!!.getOutputStream()

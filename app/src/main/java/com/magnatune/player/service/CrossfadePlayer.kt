@@ -32,21 +32,14 @@ class CrossfadePlayer(
 ) : SimpleBasePlayer(looper) {
 
     // Tees decoded 16-bit PCM to the AirPlay session while casting (passes audio through unchanged).
-    private var tapLogN = 0
     private val tapSink = object : androidx.media3.exoplayer.audio.TeeAudioProcessor.AudioBufferSink {
-        override fun flush(sampleRateHz: Int, channelCount: Int, encoding: Int) {
-            android.util.Log.i("RAOP", "tap flush sr=$sampleRateHz ch=$channelCount enc=$encoding airplayActive=$airplayActive")
-        }
+        override fun flush(sampleRateHz: Int, channelCount: Int, encoding: Int) {}
         override fun handleBuffer(buffer: java.nio.ByteBuffer) {
             if (!airplayActive) return
             val len = buffer.remaining()
             if (len <= 0) return
             val arr = ByteArray(len)
             buffer.get(arr)                    // read-only duplicate — passthrough is unaffected
-            if (tapLogN++ % 200 == 0) {
-                var nz = 0; var i = 0; while (i < arr.size && nz == 0) { if (arr[i].toInt() != 0) nz = 1; i++ }
-                android.util.Log.i("RAOP", "tap pcm len=$len nonzero=$nz")
-            }
             airplay?.enqueuePcm(arr, 0, len)
         }
     }
@@ -80,7 +73,6 @@ class CrossfadePlayer(
     private fun effVol() = if (airplayActive) 0f else masterVolume
 
     fun setAirPlayActive(on: Boolean) {
-        android.util.Log.i("RAOP", "setAirPlayActive on=$on")
         airplayActive = on
         if (on) {
             crossfading = false
