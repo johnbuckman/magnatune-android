@@ -112,6 +112,7 @@ class PlaybackController(
         val uri = local ?: UrlBuilder.resolvedStreamUrl(
             t.artistName, t.album.name, t.song,
             credentials.isMember.value, settings.streamQuality,
+            credentials.basicAuthHeader(),
         )
         val art = UrlBuilder.coverUrl(t.artistName, t.album.name, 300)
         val meta = MediaMetadata.Builder()

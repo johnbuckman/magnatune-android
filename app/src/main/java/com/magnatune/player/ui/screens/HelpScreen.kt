@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -46,12 +47,12 @@ fun HelpScreen(onNavigate: (String) -> Unit = {}) {
             section.blocks.forEach { block ->
                 when (block) {
                     is HText -> Text(
-                        helpAnnotated(block.s, onNavigate), fontSize = 16.sp, lineHeight = 24.sp,
+                        helpAnnotated(block.s, MagAccent, onNavigate), fontSize = 16.sp, lineHeight = 24.sp,
                         modifier = Modifier.padding(vertical = 3.dp),
                     )
                     is HBullet -> Row(Modifier.padding(vertical = 3.dp)) {
                         Text("•   ", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(helpAnnotated(block.s, onNavigate), fontSize = 16.sp, lineHeight = 24.sp)
+                        Text(helpAnnotated(block.s, MagAccent, onNavigate), fontSize = 16.sp, lineHeight = 24.sp)
                     }
                 }
             }
@@ -72,7 +73,7 @@ private val helpRoutes: Map<String, String> = mapOf(
  * Tiny markdown: a **term** that names a section becomes a tappable accent-colored link;
  * every other **term** is plain bold.
  */
-private fun helpAnnotated(s: String, onNavigate: (String) -> Unit): AnnotatedString = buildAnnotatedString {
+private fun helpAnnotated(s: String, accent: Color, onNavigate: (String) -> Unit): AnnotatedString = buildAnnotatedString {
     var i = 0
     while (i < s.length) {
         val start = s.indexOf("**", i)
@@ -86,7 +87,7 @@ private fun helpAnnotated(s: String, onNavigate: (String) -> Unit): AnnotatedStr
             withLink(
                 LinkAnnotation.Clickable(
                     route,
-                    TextLinkStyles(SpanStyle(color = MagAccent, fontWeight = FontWeight.Bold)),
+                    TextLinkStyles(SpanStyle(color = accent, fontWeight = FontWeight.Bold)),
                 ) { onNavigate(route) },
             ) { append(term) }
         } else {

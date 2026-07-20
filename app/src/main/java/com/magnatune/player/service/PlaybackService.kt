@@ -34,6 +34,7 @@ class PlaybackService : MediaSessionService() {
             crossfadeEnabled = { settings.crossfadeEnabled.value },
             crossfadeMs = { (settings.crossfadeDuration * 1000).toLong() },
             airplay = container.airplayRouter,
+            authHeader = { container.credentials.basicAuthHeader() },
         )
         localPlayer = player
         session = MediaSession.Builder(this, player).build()

@@ -29,6 +29,9 @@ class CrossfadePlayer(
     private val crossfadeEnabled: () -> Boolean,
     private val crossfadeMs: () -> Long,
     private val airplay: com.magnatune.player.peer.AirPlayRouter? = null,
+    /** Current HTTP Basic header for member streams (or null when signed out). Read per stream open
+     *  so a mid-session sign-in/out takes effect without rebuilding the players. */
+    private val authHeader: () -> String? = { null },
 ) : SimpleBasePlayer(looper) {
 
     // Tees decoded 16-bit PCM to the AirPlay session while casting (passes audio through unchanged).
@@ -56,8 +59,30 @@ class CrossfadePlayer(
                 .build()
     }
 
+    // Media3 now streams same-origin from magnatune.com; member (no-announcement) files are gated
+    // behind HTTP Basic auth. This factory injects the current Authorization header on each open
+    // (and cross-protocol redirects, in case the server bounces http→https). Local downloaded
+    // files (file:// URIs) go through DefaultDataSource → FileDataSource and ignore the header.
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private val httpFactory =
+        androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun mediaSourceFactory(): androidx.media3.exoplayer.source.MediaSource.Factory {
+        val dataSourceFactory = androidx.media3.datasource.DataSource.Factory {
+            val h = authHeader()
+            httpFactory.setDefaultRequestProperties(
+                if (h != null) mapOf("Authorization" to h) else emptyMap(),
+            )
+            androidx.media3.datasource.DefaultDataSource.Factory(context, httpFactory).createDataSource()
+        }
+        return androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+    }
+
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildExo() = ExoPlayer.Builder(context, audioRenderersFactory())
+        .setMediaSourceFactory(mediaSourceFactory())
         .setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),

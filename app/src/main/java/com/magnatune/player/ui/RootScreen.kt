@@ -94,7 +94,7 @@ private fun iconFor(tab: NavTab): String = when (tab) {
 fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (NavController) -> Unit = {}) {
     val nav = rememberNavController()
     NavRestore(nav, vm.settings)
-    Row(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
             ContentTopBar(nav)

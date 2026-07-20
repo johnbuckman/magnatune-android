@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * Stores the Magnatune membership login in EncryptedSharedPreferences (never plaintext/source).
- * Membership is verified once at launch and on credential change — never per media request; he3
- * serves the right file with no auth (member → clean `.m4a`, non-member → `_spoken.m4a`).
- * Mirrors the iOS Credentials class.
+ * Membership is verified at launch and on credential change (against the same-origin check.php
+ * endpoint). The stored credential is also sent as an HTTP Basic header on every member media
+ * request — magnatune.com now gates the no-announcement / high-quality files (member → clean
+ * `.m4a`/`_hi.opus`, non-member → the free `_spoken.m4a`). Mirrors the iOS Credentials class.
  */
 class Credentials(context: Context) {
 
@@ -78,20 +80,28 @@ class Credentials(context: Context) {
     }
 
     companion object {
-        /** 200 ⇒ MEMBER, other ⇒ NOT_MEMBER, network failure ⇒ UNREACHABLE. */
+        /** `{"ok":true}` ⇒ MEMBER, any other JSON ⇒ NOT_MEMBER, network failure ⇒ UNREACHABLE.
+         *  Uses the same-origin, purpose-built SPA endpoint (navim4 `m3_check_member`): POST the
+         *  credentials as a form, read the tiny JSON verdict. Reuses the same MySQL membership check
+         *  that gates the actual /music files, so the UI unlock matches what can be streamed. */
         suspend fun membershipStatus(username: String, password: String): MembershipStatus =
             withContext(Dispatchers.IO) {
                 if (username.isEmpty() || password.isEmpty()) return@withContext MembershipStatus.NOT_MEMBER
                 try {
-                    val conn = URL("http://download.magnatune.com/buy/membership_free_dl_xml")
+                    val conn = URL("https://magnatune.com/membership/check.php")
                         .openConnection() as HttpURLConnection
-                    val token = Base64.encodeToString("$username:$password".toByteArray(), Base64.NO_WRAP)
-                    conn.requestMethod = "GET"
-                    conn.setRequestProperty("Authorization", "Basic $token")
+                    conn.requestMethod = "POST"
+                    conn.doOutput = true
+                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
                     conn.connectTimeout = 20000; conn.readTimeout = 20000
+                    val enc = { s: String -> URLEncoder.encode(s, "UTF-8") }
+                    conn.outputStream.use { it.write("user=${enc(username)}&pw=${enc(password)}".toByteArray()) }
                     val code = conn.responseCode
+                    val body = if (code in 200..299)
+                        conn.inputStream.bufferedReader().use { it.readText() } else ""
                     conn.disconnect()
-                    if (code == 200) MembershipStatus.MEMBER else MembershipStatus.NOT_MEMBER
+                    if (code == 200 && body.replace(" ", "").contains("\"ok\":true"))
+                        MembershipStatus.MEMBER else MembershipStatus.NOT_MEMBER
                 } catch (_: Exception) {
                     MembershipStatus.UNREACHABLE
                 }

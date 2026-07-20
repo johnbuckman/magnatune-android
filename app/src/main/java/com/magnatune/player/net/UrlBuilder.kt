@@ -7,15 +7,22 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Member streaming quality tier (mirrors iOS StreamQuality). Members only — the free stream is
- *  always the `_spoken` announcement file. Maps to a filename suffix on the no-voice AAC stem. */
-enum class StreamQuality(val key: String, val label: String, val detail: String, val memberSuffix: String) {
-    NORMAL("normal", "Normal", "~160 kbps AAC", ""),
-    LOSSLESS("lossless", "Lossless", "256 kbps AAC-LC", "_256");
+/** Member streaming quality tier (mirrors the web player's Normal/High tiers). Members only — the
+ *  free stream is always the `_spoken` announcement file. Maps to a filename suffix + extension on
+ *  the no-voice stem: Normal = 185k AAC (`.m4a`, universal), High = 192k Opus (`_hi.opus`). */
+enum class StreamQuality(val key: String, val label: String, val detail: String,
+                         val memberSuffix: String, val memberExt: String) {
+    NORMAL("normal", "Normal", "185 kbps AAC", "", ".m4a"),
+    HIGH("high", "High", "192 kbps Opus", "_hi", ".opus");
 
     companion object {
         const val DEFAULTS_KEY = "stream.quality"
-        fun from(key: String?): StreamQuality = entries.firstOrNull { it.key == key } ?: NORMAL
+        fun from(key: String?): StreamQuality = when (key) {
+            // Legacy stored value: the old "Lossless" (256k AAC) tier was retired server-side and
+            // replaced by 192k Opus — carry those users over to High rather than dropping to Normal.
+            "lossless" -> HIGH
+            else -> entries.firstOrNull { it.key == key } ?: NORMAL
+        }
     }
 }
 
@@ -35,73 +42,83 @@ enum class DownloadFormat(val key: String, val label: String) {
 }
 
 /**
- * Builds all Magnatune URLs (streams, cover art, artist photos, downloads). All HTTP — the whole
- * Magnatune estate is HTTP-only (the network-security-config whitelists *.magnatune.com cleartext).
+ * Builds all Magnatune URLs (streams, cover art, artist photos, downloads).
+ *
+ * Everything is now served SAME-ORIGIN over HTTPS by navim4's `/music/` handler on magnatune.com
+ * (the retired `he3.magnatune.com` / `download.magnatune.com` hosts are gone). Cover art, notes and
+ * `_spoken` advert audio are free; clean member audio and album `.zip` downloads are gated behind
+ * HTTP Basic auth (see [com.magnatune.player.data.Credentials.basicAuthHeader]).
  */
 object UrlBuilder {
-    const val HE3 = "he3.magnatune.com"
-    const val DOWNLOAD = "download.magnatune.com"
-    const val WWW = "magnatune.com"
+    const val HOST = "magnatune.com"
 
-    private fun url(host: String, path: String): String =
-        Uri.Builder().scheme("http").authority(host)
+    private fun media(path: String): String =
+        Uri.Builder().scheme("https").authority(HOST)
             .appendEncodedPath(path.trimStart('/')).build().toString()
 
     private fun stem(mp3: String): String = if (mp3.endsWith(".mp3")) mp3.dropLast(4) else mp3
 
-    /** AAC (.m4a) stream. Members → no-announcement file at the chosen quality (`<stem>.m4a` /
-     *  `<stem>_256.m4a`); non-members → free `<stem>_spoken.m4a`. Both served by he3, no auth. */
+    /** Audio stream. Members → the no-announcement file at the chosen quality (`<stem>.m4a` 185k AAC
+     *  / `<stem>_hi.opus` 192k Opus); non-members → the free `<stem>_spoken.m4a` advert stream.
+     *  Member files require HTTP Basic auth on magnatune.com; the advert file is free. */
     fun streamUrl(artistName: String, albumName: String, song: Song,
                   isMember: Boolean, quality: StreamQuality = StreamQuality.NORMAL): String {
-        val suffix = if (isMember) quality.memberSuffix else "_spoken"
-        return url(HE3, "/music/$artistName/$albumName/${stem(song.mp3)}$suffix.m4a")
+        val file = if (isMember) "${stem(song.mp3)}${quality.memberSuffix}${quality.memberExt}"
+                   else "${stem(song.mp3)}_spoken.m4a"
+        return media("/music/$artistName/$albumName/$file")
     }
 
-    /** Album cover thumbnail. Sizes: 50,75,100,150,200,300,400,600,800,1400 (jpg). */
+    /** Album cover thumbnail. Sizes: 50,75,100,150,200,300,400,600,800,1400 (jpg). Free (no auth). */
     fun coverUrl(artistName: String, albumName: String, size: Int): String =
-        url(HE3, "/music/$artistName/$albumName/cover_$size.jpg")
+        media("/music/$artistName/$albumName/cover_$size.jpg")
 
     /** Sized artist thumbnail in an album dir (artist_<N>.jpg: 50,200,420,840) — tiny, preferred. */
     fun artistPhotoUrl(artistName: String, albumName: String, size: Int): String =
-        url(HE3, "/music/$artistName/$albumName/artist_$size.jpg")
+        media("/music/$artistName/$albumName/artist_$size.jpg")
 
     /** Full-resolution original from `artists.photo` (large) — fallback only. */
     fun artistPhotoOriginal(photo: String?): String? =
-        photo?.takeIf { it.isNotEmpty() }?.let { url(HE3, it) }
+        photo?.takeIf { it.isNotEmpty() }?.let { media(it) }
 
-    /** Whole-album download via the membership endpoint (member-auth handled by the browser). */
+    /** Whole-album download via the same-origin membership endpoint (member-auth handled by the
+     *  browser tab that opens it). */
     fun albumMembershipDownloadUrl(sku: String, format: String): String =
-        Uri.Builder().scheme("http").authority(DOWNLOAD).path("/membership/download3")
+        Uri.Builder().scheme("https").authority(HOST).path("/membership/download3")
             .appendQueryParameter("sku", sku).appendQueryParameter("format", format).build().toString()
 
-    /** Single-song open download on he3 (ext ∈ mp3/ogg/wav/flac/m4a). */
+    /** Single-song open download (ext ∈ mp3/ogg/wav/flac/m4a). Member-gated by the /music handler. */
     fun songDownloadUrl(artistName: String, albumName: String, song: Song, ext: String): String =
-        url(HE3, "/music/$artistName/$albumName/${stem(song.mp3)}.$ext")
+        media("/music/$artistName/$albumName/${stem(song.mp3)}.$ext")
 
     /**
-     * Best stream URL, transparently falling back from Lossless (`_256.m4a`) to the Normal member
-     * AAC when the 256k file isn't on the server. Only Lossless members trigger a HEAD probe.
+     * Best stream URL, transparently falling back from High (192k `_hi.opus`) to the Normal member
+     * AAC when the Opus file isn't on the server (album not yet re-encoded). Only High members
+     * trigger a HEAD probe; Normal / non-member URLs always exist so they're returned directly.
+     * [authHeader] is the member's HTTP Basic credential — required for the probe to see the
+     * member-gated file (a probe without it would 401 and always fall back).
      */
     suspend fun resolvedStreamUrl(artistName: String, albumName: String, song: Song,
-                                  isMember: Boolean, quality: StreamQuality): String {
-        if (!isMember || quality != StreamQuality.LOSSLESS) {
+                                  isMember: Boolean, quality: StreamQuality,
+                                  authHeader: String?): String {
+        if (!isMember || quality != StreamQuality.HIGH) {
             return streamUrl(artistName, albumName, song, isMember, quality)
         }
-        val lossless = streamUrl(artistName, albumName, song, true, StreamQuality.LOSSLESS)
+        val hi = streamUrl(artistName, albumName, song, true, StreamQuality.HIGH)
         val normal = streamUrl(artistName, albumName, song, true, StreamQuality.NORMAL)
-        return if (LosslessProbe.exists(lossless)) lossless else normal
+        return if (StreamProbe.exists(hi, authHeader)) hi else normal
     }
 }
 
-/** Session cache of which Lossless (`_256.m4a`) URLs exist, so we fall back without re-probing. */
-object LosslessProbe {
+/** Session cache of which High (`_hi.opus`) URLs exist, so we fall back without re-probing. */
+object StreamProbe {
     private val known = HashMap<String, Boolean>()
 
-    suspend fun exists(url: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun exists(url: String, authHeader: String?): Boolean = withContext(Dispatchers.IO) {
         known[url]?.let { return@withContext it }
         val ok = try {
             (URL(url).openConnection() as HttpURLConnection).run {
                 requestMethod = "HEAD"; connectTimeout = 8000; readTimeout = 8000
+                authHeader?.let { setRequestProperty("Authorization", it) }
                 val code = responseCode
                 disconnect()
                 code in 200..399

@@ -3,8 +3,10 @@ package com.magnatune.player.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -19,28 +21,45 @@ fun Modifier.magCardShadow(): Modifier = this.shadow(
     spotColor = Color.Black,
 )
 
-private val MagnatuneColors = lightColorScheme(
-    primary = MagAccent,
-    onPrimary = MagBg,
-    background = MagBg,
-    onBackground = MagOnBg,
-    surface = MagBg,
-    onSurface = MagOnBg,
-    surfaceVariant = MagCard,
-    onSurfaceVariant = MagSecondary,
-    secondary = MagSecondary,
-    outline = MagHairline,
+private val LightScheme = lightColorScheme(
+    primary = LightMagColors.accent,
+    onPrimary = LightMagColors.bg,
+    background = LightMagColors.bg,
+    onBackground = LightMagColors.onBg,
+    surface = LightMagColors.bg,
+    onSurface = LightMagColors.onBg,
+    surfaceVariant = LightMagColors.card,
+    onSurfaceVariant = LightMagColors.secondary,
+    secondary = LightMagColors.secondary,
+    outline = LightMagColors.hairline,
 )
 
-/** The app uses the iOS Catalyst light look on all platforms (no dark variant yet). */
+private val DarkScheme = darkColorScheme(
+    primary = DarkMagColors.accent,
+    onPrimary = Color.White,
+    background = DarkMagColors.bg,
+    onBackground = DarkMagColors.onBg,
+    surface = DarkMagColors.bg,
+    onSurface = DarkMagColors.onBg,
+    surfaceVariant = DarkMagColors.card,
+    onSurfaceVariant = DarkMagColors.secondary,
+    secondary = DarkMagColors.secondary,
+    outline = DarkMagColors.hairline,
+)
+
+/** Follows the system light/dark setting. The semantic `Mag*` tokens (see Color.kt) and the
+ *  Material color scheme are both swapped, so the whole UI re-themes. */
 @Composable
 fun MagnatuneTheme(
-    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = MagnatuneColors,
-        typography = MaterialTheme.typography,
-        content = content,
-    )
+    val mag = if (darkTheme) DarkMagColors else LightMagColors
+    CompositionLocalProvider(LocalMagColors provides mag) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            typography = MaterialTheme.typography,
+            content = content,
+        )
+    }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Magnatune is HTTP-only (he3 / download / www all fail TLS). Allow cleartext to
-     just those hosts; everything else stays HTTPS-only. -->
+<!-- All media now loads same-origin over HTTPS from magnatune.com (navim4 /music/* handler);
+     the old HTTP-only he3 / download hosts are retired. Cleartext to magnatune.com is kept as a
+     defensive fallback for any residual http:// URL / redirect — everything else stays HTTPS-only. -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">magnatune.com</domain>

@@ -74,6 +74,8 @@ class DownloadManager(
         val tmp = File(dir, "${t.id}.tmp")
         (URL(url).openConnection() as HttpURLConnection).run {
             connectTimeout = 20000; readTimeout = 60000
+            // Member (no-announcement) files are Basic-auth gated on magnatune.com now (he3 was open).
+            credentials.basicAuthHeader()?.let { setRequestProperty("Authorization", it) }
             if (responseCode !in 200..299) { disconnect(); return false }
             inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
             disconnect()
