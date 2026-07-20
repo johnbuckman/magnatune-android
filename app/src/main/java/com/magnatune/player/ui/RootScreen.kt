@@ -94,13 +94,90 @@ private fun iconFor(tab: NavTab): String = when (tab) {
 fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (NavController) -> Unit = {}) {
     val nav = rememberNavController()
     NavRestore(nav, vm.settings)
-    Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
-        androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
-            ContentTopBar(nav)
-            MainNav(vm, nav, onPlay, Modifier.weight(1f))
-            miniPlayer(nav)
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+    ) {
+        if (maxWidth < PHONE_BREAKPOINT) {
+            // Phone: no side rail — browse tabs across the top, library + settings along the bottom,
+            // mini-player between the content and the bottom bar (mirrors the iOS narrow layout).
+            androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                NavTabBar(nav, TOP_TABS, isTopBar = true)
+                ContentTopBar(nav, compact = true)
+                MainNav(vm, nav, onPlay, Modifier.weight(1f))
+                miniPlayer(nav)
+                NavTabBar(nav, BOTTOM_TABS, isTopBar = false)
+            }
+        } else {
+            Row(Modifier.fillMaxSize()) {
+                NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
+                androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
+                    ContentTopBar(nav)
+                    MainNav(vm, nav, onPlay, Modifier.weight(1f))
+                    miniPlayer(nav)
+                }
+            }
         }
+    }
+}
+
+/** Below this width the 168dp sidebar would eat ~40% of the screen, so we switch to tab bars. */
+private val PHONE_BREAKPOINT = 600.dp
+
+/** Same split as the iOS narrow layout: browse on top, library + settings on the bottom.
+ *  Together these cover all 11 [NavTab] entries, so nothing is unreachable without the sidebar. */
+private val TOP_TABS = listOf(
+    NavTab.POPULAR, NavTab.ARTISTS, NavTab.ALBUMS, NavTab.SONGS, NavTab.GENRES, NavTab.SEARCH,
+)
+private val BOTTOM_TABS = listOf(
+    NavTab.FAVORITES, NavTab.PLAYLISTS, NavTab.TAGS, NavTab.FEATURED, NavTab.SETTINGS,
+)
+
+/** A horizontal tab strip used only in the phone layout. [isTopBar] puts the hairline below (and
+ *  adds status-bar clearance, since the app draws edge-to-edge) instead of above. */
+@Composable
+private fun NavTabBar(nav: NavController, tabs: List<NavTab>, isTopBar: Boolean) {
+    val backStack by nav.currentBackStackEntryAsState()
+    val current = backStack?.destination?.route
+    val hairline = @Composable {
+        Box(Modifier.fillMaxWidth().height(0.5.dp)
+            .background(com.magnatune.player.ui.theme.MagHairline))
+    }
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().background(MagCard)) {
+        if (!isTopBar) hairline()
+        Row(
+            Modifier.fillMaxWidth().padding(
+                top = if (isTopBar) 30.dp else 5.dp,
+                bottom = if (isTopBar) 5.dp else 7.dp,
+                start = 4.dp, end = 4.dp,
+            ),
+        ) {
+            tabs.forEach { tab ->
+                NavTabItem(tab, current == tab.route, Modifier.weight(1f)) {
+                    nav.navigate(tab.route) { popUpTo(Routes.POPULAR); launchSingleTop = true }
+                }
+            }
+        }
+        if (isTopBar) hairline()
+    }
+}
+
+@Composable
+private fun NavTabItem(tab: NavTab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val tint = if (selected) com.magnatune.player.ui.theme.MagAccent
+               else com.magnatune.player.ui.theme.MagSecondary
+    androidx.compose.foundation.layout.Column(
+        modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        com.magnatune.player.ui.components.FaIcon(iconFor(tab), null, tint = tint, size = 19.dp)
+        Spacer(Modifier.height(3.dp))
+        Text(
+            tab.title, style = MaterialTheme.typography.labelSmall, color = tint,
+            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -189,17 +266,19 @@ private fun NavRow(tab: NavTab, selected: Boolean, onClick: () -> Unit) {
 
 /** Thin top bar in the content column: shows a back arrow + title on detail (non-top-level) routes. */
 @Composable
-private fun ContentTopBar(nav: NavController) {
+private fun ContentTopBar(nav: NavController, compact: Boolean = false) {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val isTopLevel = route == null || route == Routes.HELP || NavTab.entries.any { it.route == route }
     if (isTopLevel) return
-    // iOS-style nav back: accent chevron + "Back", no filled bar.
+    // iOS-style nav back: accent chevron + "Back", no filled bar. The generous top padding clears
+    // the status bar when this is the topmost element; in the phone layout the tab bar already does
+    // that, so [compact] tightens it up.
     Row(
         Modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .clickable { nav.popBackStack() }
-            .padding(start = 8.dp, end = 8.dp, top = 36.dp, bottom = 6.dp),
+            .padding(start = 8.dp, end = 8.dp, top = if (compact) 6.dp else 36.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.chevronLeft, "Back",
