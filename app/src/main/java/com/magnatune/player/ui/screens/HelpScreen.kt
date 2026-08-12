@@ -42,17 +42,20 @@ fun HelpScreen(onNavigate: (String) -> Unit = {}) {
                 section.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 20.dp, bottom = 6.dp),
             )
             section.blocks.forEach { block ->
                 when (block) {
                     is HText -> Text(
                         helpAnnotated(block.s, MagAccent, onNavigate), fontSize = 16.sp, lineHeight = 24.sp,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(vertical = 3.dp),
                     )
                     is HBullet -> Row(Modifier.padding(vertical = 3.dp)) {
-                        Text("•   ", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(helpAnnotated(block.s, MagAccent, onNavigate), fontSize = 16.sp, lineHeight = 24.sp)
+                        Text("•   ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                        Text(helpAnnotated(block.s, MagAccent, onNavigate), fontSize = 16.sp, lineHeight = 24.sp,
+                            color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }

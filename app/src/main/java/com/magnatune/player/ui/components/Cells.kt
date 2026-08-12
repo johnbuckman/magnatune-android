@@ -107,6 +107,7 @@ fun AlbumCell(album: Album, artistName: String, onClick: () -> Unit, modifier: M
         )
         Spacer(Modifier.size(6.dp))
         Text(album.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(artistName, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -122,8 +123,8 @@ fun ArtistRow(artist: Artist, albumName: String?, onClick: () -> Unit, trailing:
     ) {
         ArtistPhoto(artist.name, albumName, artist.photo, points = 48.dp)
         Spacer(Modifier.width(12.dp))
-        Text(artist.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(artist.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         trailing()
     }
 }
@@ -227,7 +228,8 @@ fun AlbumListRow(album: Album, artistName: String, onClick: () -> Unit) {
         CoverImage(artistName, album.name, points = 44.dp, modifier = Modifier.size(44.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(album.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(album.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(artistName, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -271,5 +273,6 @@ fun ExpandableText(text: String, collapsedLines: Int = 4, modifier: Modifier = M
 @Composable
 fun SectionHeader(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 }
