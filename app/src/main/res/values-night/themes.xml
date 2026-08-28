@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode counterpart of values/themes.xml: matches DarkMagColors.bg (#FF000000) in Color.kt
+         so the native window chrome (status/nav bars, initial window background) doesn't flash
+         light while Compose is still spinning up. -->
+    <style name="Theme.Magnatune" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

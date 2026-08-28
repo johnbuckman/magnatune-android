@@ -174,7 +174,8 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 // Rename action — matches the create/delete playlist controls' icon-button style.
                 IconButton(onClick = { renaming = true }) {
-                    com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.penToSquare, "Rename playlist", size = 18.dp)
+                    com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.penToSquare, "Rename playlist",
+                        tint = MagSecondary, size = 18.dp)
                 }
             }
             HorizontalDivider()
@@ -185,7 +186,8 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
                 onClick = { if (tracks.isNotEmpty()) onPlay(tracks, idx) },
                 trailing = {
                     IconButton(onClick = { vm.removeFromPlaylist(song.id, playlistId) }) {
-                        com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.trash, "Remove", size = 18.dp)
+                        com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.trash, "Remove",
+                            tint = MagSecondary, size = 18.dp)
                     }
                 })
         }

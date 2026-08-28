@@ -113,7 +113,8 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                         onClick = { showCover = true })
                     Spacer(Modifier.size(16.dp))
                     Column {
-                        Text(album.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(album.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground)
                         Text(artistName, style = MaterialTheme.typography.titleMedium, color = MagSecondary,
                             modifier = Modifier.padding(top = 2.dp).clickableNav { nav.navigate(Routes.artist(album.artistId)) })
                         formatReleaseDate(album.releaseDate)?.let {
@@ -212,7 +213,8 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
                         onClick = { showPhoto = true })
                     Spacer(Modifier.size(16.dp))
                     Column {
-                        Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground)
                         Row(modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(artistNowPlaying && playing) { onPlay(artistTracks, 0) }
@@ -275,7 +277,8 @@ private fun SongRowAlbumEntry(vm: MagnatuneViewModel, album: Album, artistName: 
         verticalAlignment = Alignment.CenterVertically) {
         CoverImage(artistName, album.name, points = 48.dp, modifier = Modifier.size(48.dp))
         Spacer(Modifier.size(12.dp))
-        Text(album.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 8.dp))
+        Text(album.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(end = 8.dp))
     }
 }
 

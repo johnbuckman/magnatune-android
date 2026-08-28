@@ -94,26 +94,30 @@ private fun iconFor(tab: NavTab): String = when (tab) {
 fun RootScreen(vm: MagnatuneViewModel, onPlay: OnPlay, miniPlayer: @Composable (NavController) -> Unit = {}) {
     val nav = rememberNavController()
     NavRestore(nav, vm.settings)
-    androidx.compose.foundation.layout.BoxWithConstraints(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-    ) {
-        if (maxWidth < PHONE_BREAKPOINT) {
-            // Phone: no side rail — browse tabs across the top, library + settings along the bottom,
-            // mini-player between the content and the bottom bar (mirrors the iOS narrow layout).
-            androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
-                NavTabBar(nav, TOP_TABS, isTopBar = true)
-                ContentTopBar(nav, compact = true)
-                MainNav(vm, nav, onPlay, Modifier.weight(1f))
-                miniPlayer(nav)
-                NavTabBar(nav, BOTTOM_TABS, isTopBar = false)
-            }
-        } else {
-            Row(Modifier.fillMaxSize()) {
-                NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
-                androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
-                    ContentTopBar(nav)
+    // A plain Modifier.background() only paints pixels — it doesn't provide LocalContentColor, so
+    // unstyled Text()/Icon() calls anywhere below would fall back to Material3's hard-coded black
+    // default and vanish once the background goes dark. Surface() sets LocalContentColor from the
+    // theme (via contentColorFor), which is what keeps text/icons visible in dark mode.
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            if (maxWidth < PHONE_BREAKPOINT) {
+                // Phone: no side rail — browse tabs across the top, library + settings along the bottom,
+                // mini-player between the content and the bottom bar (mirrors the iOS narrow layout).
+                androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                    NavTabBar(nav, TOP_TABS, isTopBar = true)
+                    ContentTopBar(nav, compact = true)
                     MainNav(vm, nav, onPlay, Modifier.weight(1f))
                     miniPlayer(nav)
+                    NavTabBar(nav, BOTTOM_TABS, isTopBar = false)
+                }
+            } else {
+                Row(Modifier.fillMaxSize()) {
+                    NavSidebar(nav, Modifier.width(168.dp).fillMaxHeight().padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
+                    androidx.compose.foundation.layout.Column(Modifier.weight(1f).fillMaxHeight()) {
+                        ContentTopBar(nav)
+                        MainNav(vm, nav, onPlay, Modifier.weight(1f))
+                        miniPlayer(nav)
+                    }
                 }
             }
         }

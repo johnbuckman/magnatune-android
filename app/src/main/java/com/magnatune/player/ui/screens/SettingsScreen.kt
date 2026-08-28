@@ -37,7 +37,8 @@ import com.magnatune.player.ui.theme.MagSecondary
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground)
         Column(Modifier.padding(top = 8.dp)) { content() }
     }
     HorizontalDivider()
@@ -46,7 +47,7 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f))
+        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }
