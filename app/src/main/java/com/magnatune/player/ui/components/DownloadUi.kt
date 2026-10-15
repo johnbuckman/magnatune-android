@@ -34,7 +34,7 @@ fun AlbumDownloadButton(vm: MagnatuneViewModel, sku: String) {
     }
 }
 
-/** Member-only single-song download — opens the open he3 per-track file in the browser. */
+/** Member-only single-song download — opens the per-track file on magnatune.com in the browser. */
 @Composable
 fun SongDownloadButton(vm: MagnatuneViewModel, track: PlayableTrack) {
     val isMember by vm.credentials.isMember.collectAsStateWithLifecycle()

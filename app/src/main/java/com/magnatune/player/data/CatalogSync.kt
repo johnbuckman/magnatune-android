@@ -11,7 +11,7 @@ import java.util.zip.GZIPInputStream
 /**
  * Downloads and refreshes the catalog SQLite database (mirrors iOS CatalogSync).
  *
- * Flow: GET he3/info/changed.txt (a CRC). If it differs from the stored value (or no catalog
+ * Flow: GET magnatune.com/info/changed.txt (a CRC). If it differs from the stored value (or no catalog
  * exists), download sqlite_normalized.db.gz, gunzip, sanity-check the SQLite header, and atomically
  * replace the on-disk catalog. A seed copy is bundled in assets so the app works on first launch.
  */
@@ -19,8 +19,8 @@ class CatalogSync(private val context: Context) {
     private val prefs = context.getSharedPreferences("catalog", Context.MODE_PRIVATE)
 
     companion object {
-        const val CHANGED_URL = "http://he3.magnatune.com/info/changed.txt"
-        const val DB_GZ_URL = "http://he3.magnatune.com/info/sqlite_normalized.db.gz"
+        const val CHANGED_URL = "https://magnatune.com/info/changed.txt"
+        const val DB_GZ_URL = "https://magnatune.com/info/sqlite_normalized.db.gz"
         private const val CRC_KEY = "catalog.crc"
         private const val LAST_CHECK_KEY = "catalog.lastCheck"
         private const val SEED_VERSION_KEY = "catalog.seedVersion"

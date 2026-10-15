@@ -197,7 +197,7 @@ private fun DownloadSection(vm: MagnatuneViewModel) {
         }
         var song by remember { mutableStateOf(vm.settings.songDownloadFormat) }
         Text("Song", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
-        // Full iOS set: mp3, ogg, flac, wav (per-song he3 ext).
+        // Full iOS set: mp3, ogg, flac, wav (per-song file ext).
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(top = 4.dp).fillMaxWidth().horizontalScroll(rememberScrollState())) {
             listOf("mp3", "ogg", "flac", "wav").forEach { f ->
