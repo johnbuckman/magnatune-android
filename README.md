@@ -2,8 +2,8 @@
 
 A native Android client for [magnatune.com](https://magnatune.com) — Kotlin / Jetpack Compose /
 Media3. It's a port of the SwiftUI iOS app: browse the whole Magnatune catalog, stream AAC, manage
-favorites and playlists, and (for members) stream the no-announcement / lossless tiers and download
-albums.
+favorites and playlists, and (for members) stream without the voice overlay at higher quality and
+download albums.
 
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
@@ -15,7 +15,8 @@ albums.
   persistent mini-player and a Now Playing screen, queue, shuffle, and **crossfade** between tracks
   (dual-player engine, toggle in Settings).
 - **Favorites & dislikes**, user **playlists**, add/remove-to-playlist.
-- **Membership**: sign in to stream the no-announcement and lossless tiers and download albums/songs.
+- **Membership**: sign in to stream without the voice overlay at higher quality and download
+  albums/songs; non-members can buy any album for $8 (100% to the musician).
 - **Auto-download favorites** for offline playback.
 - **Casting**: Google Cast and (discovery for) Apple AirPlay — two icons that appear only when a
   device of that type is on the network.
@@ -74,8 +75,8 @@ Without that file the release build is produced unsigned.
 - **UI** — Jetpack Compose + Material 3 (the iOS "Catalyst" light look). Adaptive sidebar layout.
 - **Audio** — `CrossfadePlayer` (a Media3 `SimpleBasePlayer` wrapping two ExoPlayers) inside a
   foreground `MediaSessionService`.
-- **Data** — read-only catalog SQLite downloaded from he3 (replaced wholesale on refresh) + a
-  read-write Room user DB (favorites / dislikes / playlists / history / downloads).
+- **Data** — read-only catalog SQLite downloaded from
+  `https://magnatune.com/info/sqlite_normalized.db.gz` (replaced wholesale on refresh) + a read-write Room user DB (favorites / dislikes / playlists / history / downloads).
 - **Images** Coil · **Credentials** EncryptedSharedPreferences · **Cast** Media3 CastPlayer ·
   **AirPlay/peer discovery** Android NSD.
 

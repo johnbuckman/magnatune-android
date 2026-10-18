@@ -252,10 +252,18 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     }
 
     // ---- membership ----
-    fun login(username: String, password: String, onResult: (Boolean) -> Unit) = viewModelScope.launch {
-        val ok = com.magnatune.player.data.Credentials.verify(username, password)
-        if (ok) credentials.save(username, password)
-        onResult(ok)
+    /** Verify + save; [onResult] gets null on success, else the message to show. */
+    fun login(username: String, password: String, onResult: (String?) -> Unit) = viewModelScope.launch {
+        val result = com.magnatune.player.data.Credentials.verify(username, password)
+        when (result.status) {
+            com.magnatune.player.data.Credentials.MembershipStatus.MEMBER -> {
+                credentials.save(username, password); onResult(null)
+            }
+            com.magnatune.player.data.Credentials.MembershipStatus.NOT_MEMBER ->
+                onResult(result.error ?: "Sign-in failed — check your username and password.")
+            com.magnatune.player.data.Credentials.MembershipStatus.UNREACHABLE ->
+                onResult("Can't reach magnatune.com — check your connection.")
+        }
     }
     fun logout() = credentials.clear()
 

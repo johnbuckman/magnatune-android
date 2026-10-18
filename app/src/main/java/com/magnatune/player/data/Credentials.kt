@@ -24,6 +24,14 @@ class Credentials(context: Context) {
 
     enum class MembershipStatus { MEMBER, NOT_MEMBER, UNREACHABLE }
 
+    /** check.php verdict: [error] is the server's user-facing message (if any), [reason] its
+     *  machine code — e.g. `"ended"` for a lapsed membership. */
+    data class MembershipResult(
+        val status: MembershipStatus,
+        val error: String? = null,
+        val reason: String? = null,
+    )
+
     private val prefs = run {
         val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         EncryptedSharedPreferences.create(
@@ -42,6 +50,11 @@ class Credentials(context: Context) {
     /** Optimistic at init from stored creds; the launch re-verify downgrades an expired membership. */
     val isMember: StateFlow<Boolean> = _isMember.asStateFlow()
 
+    private val _membershipMessage = MutableStateFlow<String?>(null)
+    /** Server message from the launch re-verify when the stored membership has ended (shown in
+     *  Settings → Membership); null otherwise. The credentials are kept so they can rejoin. */
+    val membershipMessage: StateFlow<String?> = _membershipMessage.asStateFlow()
+
     fun password(): String? = prefs.getString("password", null)?.takeIf { it.isNotEmpty() }
     fun hasPassword(): Boolean = !password().isNullOrEmpty()
 
@@ -50,12 +63,14 @@ class Credentials(context: Context) {
         _username.value = username
         prefs.edit().putString("username", username).putString("password", password).apply()
         _isMember.value = username.isNotEmpty() && password.isNotEmpty()
+        _membershipMessage.value = null
     }
 
     fun clear() {
         _username.value = ""
         prefs.edit().remove("username").remove("password").apply()
         _isMember.value = false
+        _membershipMessage.value = null
     }
 
     /** Re-verify stored membership; a network blip leaves the previous status untouched. */
@@ -63,9 +78,15 @@ class Credentials(context: Context) {
         val user = _username.value
         val pw = password()
         if (user.isEmpty() || pw.isNullOrEmpty()) { _isMember.value = false; return }
-        when (membershipStatus(user, pw)) {
-            MembershipStatus.MEMBER -> _isMember.value = true
-            MembershipStatus.NOT_MEMBER -> _isMember.value = false
+        val result = membershipStatus(user, pw)
+        when (result.status) {
+            MembershipStatus.MEMBER -> { _isMember.value = true; _membershipMessage.value = null }
+            MembershipStatus.NOT_MEMBER -> {
+                _isMember.value = false
+                // Lapsed membership: keep the stored login (rejoining reuses it) and say why.
+                _membershipMessage.value = if (result.reason == "ended")
+                    result.error ?: "Your Magnatune membership has ended." else null
+            }
             MembershipStatus.UNREACHABLE -> {}
         }
     }
@@ -80,13 +101,14 @@ class Credentials(context: Context) {
     }
 
     companion object {
-        /** `{"ok":true}` ⇒ MEMBER, any other JSON ⇒ NOT_MEMBER, network failure ⇒ UNREACHABLE.
-         *  Uses the same-origin, purpose-built SPA endpoint (navim4 `m3_check_member`): POST the
-         *  credentials as a form, read the tiny JSON verdict. Reuses the same MySQL membership check
-         *  that gates the actual /music files, so the UI unlock matches what can be streamed. */
-        suspend fun membershipStatus(username: String, password: String): MembershipStatus =
+        /** `{"ok":true}` ⇒ MEMBER, any other JSON ⇒ NOT_MEMBER (carrying the server's `error` /
+         *  `reason`), network failure ⇒ UNREACHABLE. Uses the same-origin, purpose-built SPA
+         *  endpoint (navim4 `m3_check_member`): POST the credentials as a form, read the tiny JSON
+         *  verdict. Reuses the same MySQL membership check that gates the actual /music files, so
+         *  the UI unlock matches what can be streamed. */
+        suspend fun membershipStatus(username: String, password: String): MembershipResult =
             withContext(Dispatchers.IO) {
-                if (username.isEmpty() || password.isEmpty()) return@withContext MembershipStatus.NOT_MEMBER
+                if (username.isEmpty() || password.isEmpty()) return@withContext MembershipResult(MembershipStatus.NOT_MEMBER)
                 try {
                     val conn = URL("https://magnatune.com/membership/check.php")
                         .openConnection() as HttpURLConnection
@@ -100,14 +122,23 @@ class Credentials(context: Context) {
                     val body = if (code in 200..299)
                         conn.inputStream.bufferedReader().use { it.readText() } else ""
                     conn.disconnect()
-                    if (code == 200 && body.replace(" ", "").contains("\"ok\":true"))
-                        MembershipStatus.MEMBER else MembershipStatus.NOT_MEMBER
+                    parseCheckResponse(code, body)
                 } catch (_: Exception) {
-                    MembershipStatus.UNREACHABLE
+                    MembershipResult(MembershipStatus.UNREACHABLE)
                 }
             }
 
-        suspend fun verify(username: String, password: String): Boolean =
-            membershipStatus(username, password) == MembershipStatus.MEMBER
+        /** Pure parse of a check.php reply, e.g. `{"ok":false,"reason":"ended","error":"…"}`. */
+        fun parseCheckResponse(code: Int, body: String): MembershipResult {
+            if (code != 200) return MembershipResult(MembershipStatus.NOT_MEMBER)
+            val json = runCatching { org.json.JSONObject(body) }.getOrNull()
+                ?: return MembershipResult(MembershipStatus.NOT_MEMBER)
+            if (json.optBoolean("ok", false)) return MembershipResult(MembershipStatus.MEMBER)
+            val str = { k: String -> json.optString(k, "").trim().takeIf { it.isNotEmpty() && !json.isNull(k) } }
+            return MembershipResult(MembershipStatus.NOT_MEMBER, error = str("error"), reason = str("reason"))
+        }
+
+        suspend fun verify(username: String, password: String): MembershipResult =
+            membershipStatus(username, password)
     }
 }

@@ -128,6 +128,11 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                             com.magnatune.player.ui.components.AddToPlaylistButton(vm, "album", album.id)
                             com.magnatune.player.ui.components.AlbumDownloadButton(vm, album.sku)
                         }
+                        // Non-members: buy this album ($8, all to the musician). Own line so it
+                        // never pushes the action icons off a phone-width row.
+                        Row(modifier = Modifier.padding(top = 8.dp)) {
+                            com.magnatune.player.ui.components.AlbumBuyButton(vm, album.sku)
+                        }
                     }
                 }
                 chips?.let { (genres, tags) ->

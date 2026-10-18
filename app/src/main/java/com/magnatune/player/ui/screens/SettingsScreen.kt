@@ -1,12 +1,15 @@
 package com.magnatune.player.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -17,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -27,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magnatune.player.net.DownloadFormat
@@ -115,19 +120,35 @@ private fun StorageSection(vm: MagnatuneViewModel) {
     }
 }
 
+/** Open a magnatune.com page in the browser (membership signup/account, info pages). */
+private fun openInBrowser(context: android.content.Context, url: String) {
+    runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+}
+
 @Composable
 private fun MembershipSection(vm: MagnatuneViewModel) {
     val isMember by vm.credentials.isMember.collectAsStateWithLifecycle()
     val username by vm.credentials.username.collectAsStateWithLifecycle()
+    val membershipMessage by vm.credentials.membershipMessage.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     Section("Membership") {
         if (isMember) {
             Text("Signed in as $username", color = MagSecondary)
-            OutlinedButton(onClick = { vm.logout() }, modifier = Modifier.padding(top = 8.dp)) { Text("Sign out") }
+            Text("Tracks stream without the voice overlay.",
+                color = MagSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+            TextButton(onClick = { openInBrowser(context, "https://magnatune.com/member/account") },
+                contentPadding = PaddingValues(0.dp)) { Text("Your membership, licence & billing →") }
+            OutlinedButton(onClick = { vm.logout() }, modifier = Modifier.padding(top = 4.dp)) { Text("Sign out") }
         } else {
-            var user by remember { mutableStateOf("") }
+            // A lapsed membership keeps its stored login, so prefill it for signing in after rejoining.
+            var user by remember { mutableStateOf(username) }
             var pw by remember { mutableStateOf("") }
             var error by remember { mutableStateOf<String?>(null) }
             var busy by remember { mutableStateOf(false) }
+            membershipMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+            }
             OutlinedTextField(user, { user = it }, label = { Text("Username") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth())
             OutlinedTextField(pw, { pw = it }, label = { Text("Password") }, singleLine = true,
@@ -137,13 +158,21 @@ private fun MembershipSection(vm: MagnatuneViewModel) {
             Button(
                 onClick = {
                     busy = true; error = null
-                    vm.login(user.trim(), pw) { ok -> busy = false; if (!ok) error = "Sign-in failed — check your credentials." }
+                    vm.login(user.trim(), pw) { msg -> busy = false; error = msg }
                 },
                 enabled = !busy && user.isNotBlank() && pw.isNotBlank(),
                 modifier = Modifier.padding(top = 8.dp),
             ) { Text(if (busy) "Signing in…" else "Sign in") }
-            Text("Magnatune members stream without the spoken announcement and can download albums.",
+            Text("Log in to stream tracks without the voice overlay.",
                 color = MagSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+            OutlinedButton(
+                onClick = { openInBrowser(context, "https://magnatune.com/member/signup") },
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) { Text("Become a member", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium) }
+            Text("$10 a month, $99 a year, or $299 for life.",
+                color = MagSecondary, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center)
         }
     }
 }
@@ -219,13 +248,27 @@ private fun LibrarySection(vm: MagnatuneViewModel) {
     }
 }
 
+/** magnatune.com info pages linked from About (same list as the iOS app). */
+private val aboutLinks: List<Pair<String, String>> = listOf(
+    "FAQ" to "https://magnatune.com/info/faq",
+    "Magnatune Project Licence" to "https://magnatune.com/info/licensing",
+    "Give away our music" to "https://magnatune.com/info/give",
+    "Podcast our music" to "https://magnatune.com/info/podcast",
+    "Creative Commons" to "https://magnatune.com/info/cc_licensed",
+    "For musicians" to "https://magnatune.com/info/terms",
+    "APIs, RSS & XML" to "https://magnatune.com/info/api",
+    "Terms of use" to "https://magnatune.com/terms_of_use",
+    "Contact Magnatune" to "https://magnatune.com/info/contact",
+)
+
 @Composable
 private fun AboutSection(onShowHelp: () -> Unit = {}) {
     var showWhyNotEvil by remember { mutableStateOf(false) }
     var showFoundersRant by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     Section("About") {
-        Text("Magnatune Player 0.1 — we are not evil.", color = MagSecondary)
-        Text("Music licensed Creative Commons by Magnatune (magnatune.com).",
+        Text("Magnatune ${com.magnatune.player.BuildConfig.VERSION_NAME}", color = MagSecondary)
+        Text("Music © the artists, licensed Creative Commons BY-NC-SA for non-commercial use; commercial use with the Magnatune Project Licence.",
             color = MagSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
             // In-app scrollable content (mirrors iOS InfoSheet) — no browser.
@@ -233,6 +276,12 @@ private fun AboutSection(onShowHelp: () -> Unit = {}) {
             OutlinedButton(onClick = { showFoundersRant = true }) { Text("Founder's rant") }
         }
         OutlinedButton(onClick = onShowHelp, modifier = Modifier.padding(top = 8.dp)) { Text("App Help") }
+        Column(Modifier.padding(top = 8.dp)) {
+            aboutLinks.forEach { (label, url) ->
+                Text(label, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth().clickable { openInBrowser(context, url) }.padding(vertical = 8.dp))
+            }
+        }
     }
     if (showWhyNotEvil) {
         InfoSheet("Why we are not evil", onDismiss = { showWhyNotEvil = false }) {

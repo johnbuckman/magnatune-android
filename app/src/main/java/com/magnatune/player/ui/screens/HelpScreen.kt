@@ -108,7 +108,7 @@ private data class HSection(val title: String, val blocks: List<HBlock>)
 private val helpSections: List<HSection> = listOf(
     HSection("Welcome to Magnatune", listOf(
         HText("Magnatune is an independent record label founded in 2003 on a simple idea: be fair to musicians and fair to listeners. Our motto is “we are not evil.”"),
-        HText("Every album is hand-picked — we accept about 3% of submissions — and you can listen to everything in full before you decide to buy. When you do buy, half the money goes straight to the artist. All the music is Creative Commons licensed, with no copy protection (DRM)."),
+        HText("Every album is hand-picked — we accept about 3% of submissions — and you can listen to everything in full before you decide to buy. When you buy an album, 100% of the money goes straight to the musician. All the music is Creative Commons licensed, with no copy protection (DRM)."),
         HText("This app streams Magnatune's entire catalog: hundreds of artists across classical, jazz, electronica, rock, ambient, world and more."),
     )),
     HSection("Finding your way around", listOf(
@@ -148,9 +148,11 @@ private val helpSections: List<HSection> = listOf(
         HBullet("Inside a playlist you can remove tracks or delete the playlist."),
     )),
     HSection("Membership & sound quality", listOf(
-        HText("You can stream everything for free. Free streams include a short spoken announcement at the end of each track."),
-        HText("A Magnatune membership removes the announcement, unlocks higher-quality audio, and lets you download music. Sign in under **Settings** → Membership."),
-        HBullet("Members can choose **Normal** or **Lossless** audio quality in **Settings**."),
+        HText("You can listen to everything for free. Free streams have a short spoken voice overlaid on the music every 30 seconds."),
+        HText("A Magnatune membership ($10 a month, $99 a year or $299 for life) removes the voice overlay, unlocks higher-quality audio, and lets you download any album. Join or sign in under **Settings** → Membership."),
+        HText("You can also buy any single album for $8: 100% of your payment goes to the musician."),
+        HText("Make things with our music: members can use it in their own projects (videos, podcasts, games, client work) under the Magnatune Project Licence."),
+        HBullet("Members can choose **Normal** or **High** audio quality in **Settings**."),
     )),
     HSection("Offline listening", listOf(
         HText("Members can keep music on the device to play without a connection."),

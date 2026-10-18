@@ -45,20 +45,19 @@ fun InfoBullet(text: String) {
     }
 }
 
-/** "Why we are not evil" points — verbatim from the iOS app (magnatune.com/info/whynotevil). */
+/** "Why we are not evil" points — matches magnatune.com/info/whynotevil. */
 val whyNotEvilPoints: List<String> = listOf(
     "Fantastic music: we work with artists directly, not with record labels, and all our music is hand-picked. On average, we accept 3% of submissions.",
     "Perfect audio quality: our music is available in both lossless and smaller-size \"lossy\" formats.",
     "Many audio formats: albums download as WAV, super-high-quality VBR MP3, AAC, Apple Lossless (ALAC), and open-source-friendly FLAC, OGG and OPUS.",
-    "Listen to everything: all our albums can be heard in their entirety before you buy.",
-    "Download everything: once you've paid, download anything from our entire catalog — no limits.",
-    "Musicians get paid: 50% of your purchase price goes directly to the musician, not to labels and their lawyers.",
-    "Name your price: you choose how much to pay, and 50% of your choice goes to the artist.",
+    "Listen to everything: listen to every album in full, free. Free streams have a short spoken voice every 30 seconds; members hear the music without it.",
+    "Download everything: members can download anything from our entire catalog, no limits.",
+    "Musicians get paid: when you buy an album for $8, 100% goes straight to the musician. Magnatune keeps nothing.",
+    "Make things with our music: members can use our music in their own projects under the Magnatune Project Licence.",
     "Give to your friends: we encourage you to give 3 copies of any music from your membership to your friends.",
-    "Creative Commons: our 128k MP3s are some-rights-reserved Creative Commons licensed.",
+    "Creative Commons: all our music is licensed Creative Commons BY-NC-SA for non-commercial sharing and reuse.",
     "Remix friendly: tons of our music, acapellas and samples are available for remixing at CC Mixter.",
     "100% legal: Magnatune is completely legal all over the world.",
-    "Licensing: all our music can be licensed for commercial use instantly and online, with no additional permissions.",
     "Artists direct: we sign contracts directly with musicians — no middlemen in the way of the artist's royalties.",
     "Podcast-legal: non-commercial podcasters can use our music for free.",
     "No major labels: we have nothing to do with major labels, their lawyers or the RIAA.",
