@@ -15,12 +15,39 @@ import com.magnatune.player.model.Tag
  * refresh; never written here. Mirrors the iOS CatalogStore raw-SQL queries 1:1.
  *
  * Open it on a background thread; SQLiteDatabase is thread-safe for reads.
+ *
+ * One instance lives for the whole process: after a refresh, [reopen] swaps the underlying
+ * handle in place, so callers holding a reference to this store never touch a closed database.
  */
 class CatalogStore(path: String) {
-    private val db: SQLiteDatabase =
-        SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)
+    @Volatile
+    private var db: SQLiteDatabase = open(path)
+
+    private fun open(path: String) = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)
+
+    /** Switch to a freshly installed catalog file and close the old handle. Queries already
+     *  running on the old handle finish (SQLite refcounts open cursors); a query that grabbed the
+     *  old handle just as it closed is retried on the new one (see [withDb]). */
+    fun reopen(path: String) {
+        val old = db
+        db = open(path)
+        old.close()
+    }
 
     fun close() = db.close()
+
+    /** Run [block] on the current handle, retrying once if [reopen] closed it underneath us
+     *  (first launch: the refresh swaps the catalog while the home screen is still loading). */
+    private inline fun <R> withDb(block: (SQLiteDatabase) -> R): R {
+        val handle = db
+        return try {
+            block(handle)
+        } catch (e: IllegalStateException) {
+            val current = db
+            if (current === handle || handle.isOpen) throw e
+            block(current)
+        }
+    }
 
     // ---- cursor mappers ----
     private fun Cursor.long(col: String) = getLong(getColumnIndexOrThrow(col))
@@ -56,13 +83,15 @@ class CatalogStore(path: String) {
     )
 
     private fun <T> query(sql: String, args: Array<String> = emptyArray(), map: (Cursor) -> T): List<T> {
-        val out = ArrayList<T>()
-        db.rawQuery(sql, args).use { c -> while (c.moveToNext()) out.add(map(c)) }
-        return out
+        return withDb { db ->
+            val out = ArrayList<T>()
+            db.rawQuery(sql, args).use { c -> while (c.moveToNext()) out.add(map(c)) }
+            out
+        }
     }
 
     private fun <T> queryOne(sql: String, args: Array<String> = emptyArray(), map: (Cursor) -> T): T? {
-        db.rawQuery(sql, args).use { c -> return if (c.moveToFirst()) map(c) else null }
+        return withDb { db -> db.rawQuery(sql, args).use { c -> if (c.moveToFirst()) map(c) else null } }
     }
 
     // ---- Artists ----

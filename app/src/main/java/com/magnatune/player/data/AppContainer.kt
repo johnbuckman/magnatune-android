@@ -124,11 +124,11 @@ class AppContainer(context: Context) {
         return CatalogStore(catalogSync.catalogPath())
     }
 
-    /** Swap in a freshly downloaded catalog (closes the old handle). */
+    /** Swap in a freshly downloaded catalog. The [CatalogStore] instance stays the same (callers
+     *  may hold it mid-query); only its underlying database handle is replaced. */
     fun reopenCatalog() {
         synchronized(this) {
-            _catalog?.close()
-            _catalog = CatalogStore(catalogSync.catalogPath())
+            _catalog?.reopen(catalogSync.catalogPath()) ?: run { _catalog = openCatalog() }
         }
     }
 }
