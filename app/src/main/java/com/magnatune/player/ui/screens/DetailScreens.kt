@@ -121,6 +121,7 @@ fun AlbumDetailScreen(vm: MagnatuneViewModel, nav: NavController, albumId: Long,
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MagSecondary,
                                 modifier = Modifier.padding(top = 4.dp))
                         }
+                        com.magnatune.player.ui.components.DownloadSummaryText(allSongs.map { it.id }, Modifier.padding(top = 4.dp))
                         Row(modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(albumNowPlaying && playing) { onPlay(tracks, 0) }
@@ -220,6 +221,7 @@ fun ArtistDetailScreen(vm: MagnatuneViewModel, nav: NavController, artistId: Lon
                     Column {
                         Text(a.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground)
+                        com.magnatune.player.ui.components.DownloadSummaryText(artistTracksRaw.map { it.song.id }, Modifier.padding(top = 4.dp))
                         Row(modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             PlayButton(artistNowPlaying && playing) { onPlay(artistTracks, 0) }

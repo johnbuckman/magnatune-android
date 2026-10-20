@@ -195,6 +195,7 @@ fun SongRow(
             }
         }
         Text(song.durationText, style = MaterialTheme.typography.bodySmall, color = MagSecondary)
+        DownloadStatusIcon(song.id)
         trailing()
     }
 }

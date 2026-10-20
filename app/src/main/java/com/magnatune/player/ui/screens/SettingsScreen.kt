@@ -92,7 +92,8 @@ private fun StorageRow(label: String, value: String, onClear: (() -> Unit)? = nu
 @Composable
 private fun StorageSection(vm: MagnatuneViewModel) {
     val downloadBytes by vm.downloads.storageBytes.collectAsStateWithLifecycle()
-    val downloading by vm.downloads.downloading.collectAsStateWithLifecycle()
+    val dl by vm.downloads.status.collectAsStateWithLifecycle()
+    val downloading = dl.downloading.isNotEmpty() || dl.queued.isNotEmpty()
     val context = androidx.compose.ui.platform.LocalContext.current
     // Coil's disk image cache (album art + artist photos). Recomputed after a clear via [tick].
     var tick by remember { mutableStateOf(0) }

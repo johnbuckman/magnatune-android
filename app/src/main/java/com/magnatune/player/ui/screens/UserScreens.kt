@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -24,6 +25,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -122,7 +124,11 @@ private fun SectionHeaderWithPlayAll(title: String, onPlayAll: () -> Unit) {
 @Composable
 fun PlaylistsScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) {
     val playlists by vm.userStore.playlists.collectAsStateWithLifecycle()
-    if (playlists.isEmpty()) {
+    val isMember by vm.credentials.isMember.collectAsStateWithLifecycle()
+    val autoDownload by vm.settings.autoDownloadFavorites.collectAsStateWithLifecycle()
+    val dl by vm.downloads.status.collectAsStateWithLifecycle()
+    val showDownloads = isMember && autoDownload
+    if (playlists.isEmpty() && !showDownloads) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No playlists yet — use the + button on any song.", color = MagSecondary,
                 modifier = Modifier.padding(32.dp))
@@ -130,6 +136,20 @@ fun PlaylistsScreen(vm: MagnatuneViewModel, nav: NavController, onPlay: OnPlay) 
         return
     }
     LazyColumn(Modifier.fillMaxSize()) {
+        // Auto-managed "Downloads" — every song your favorites keep for offline play, with live
+        // download status (mirrors iOS). Pinned first; can't be renamed or deleted.
+        if (showDownloads) item(key = "downloads") {
+            ListItem(
+                headlineContent = { Text("Downloads") },
+                supportingContent = {
+                    Text(if (dl.pendingCount > 0) "${dl.doneCount} of ${dl.targetIds.size} available offline"
+                         else "${dl.targetIds.size} song${if (dl.targetIds.size == 1) "" else "s"} available offline")
+                },
+                leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.DownloadForOffline, null, tint = MagSecondary) },
+                modifier = Modifier.clickable { nav.navigate(Routes.DOWNLOADS) },
+            )
+            HorizontalDivider()
+        }
         items(playlists, key = { it.id }) { pl ->
             ListItem(
                 headlineContent = { Text(pl.name) },
@@ -190,6 +210,73 @@ fun UserPlaylistDetailScreen(vm: MagnatuneViewModel, nav: NavController, playlis
                             tint = MagSecondary, size = 18.dp)
                     }
                 })
+        }
+    }
+}
+
+/** Auto-managed "Downloads" playlist (mirrors iOS DownloadsView): every song the favorites imply,
+ *  not-yet-downloaded first (downloading, failed, queued), then downloaded, each in favorites
+ *  order. Play / Shuffle play only the downloaded songs — the thing to play offline. */
+@Composable
+fun DownloadsScreen(vm: MagnatuneViewModel, onPlay: OnPlay) {
+    val dl by vm.downloads.status.collectAsStateWithLifecycle()
+    val bytes by vm.downloads.storageBytes.collectAsStateWithLifecycle()
+    val tracksRaw by produceState(emptyList<PlayableTrack>(), dl.targetIds) {
+        value = vm.playableForSongIds(dl.targetIds)
+    }
+    val rank = { id: Long ->
+        when (dl.state(id)) {
+            com.magnatune.player.data.DownloadState.DOWNLOADING -> 0
+            com.magnatune.player.data.DownloadState.FAILED -> 1
+            com.magnatune.player.data.DownloadState.QUEUED -> 2
+            else -> 3
+        }
+    }
+    val ordered = tracksRaw.withIndex().sortedWith(compareBy({ rank(it.value.id) }, { it.index })).map { it.value }
+    val ready = ordered.filter { dl.state(it.id) == com.magnatune.player.data.DownloadState.DOWNLOADED }
+
+    if (dl.targetIds.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No downloads — favorite a song, album, or artist and it downloads here automatically for offline listening.",
+                color = MagSecondary, modifier = Modifier.padding(32.dp))
+        }
+        return
+    }
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text("Downloads", style = MaterialTheme.typography.headlineSmall)
+                val parts = mutableListOf(
+                    if (dl.doneCount == dl.targetIds.size) "All ${dl.targetIds.size} songs available offline"
+                    else "${dl.doneCount} of ${dl.targetIds.size} available offline")
+                if (bytes > 0) parts.add(android.text.format.Formatter.formatShortFileSize(androidx.compose.ui.platform.LocalContext.current, bytes))
+                if (dl.pausedOffline) parts.add("Paused — waiting for network")
+                else if (dl.downloading.isNotEmpty()) parts.add("Downloading…")
+                Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MagSecondary,
+                    modifier = Modifier.padding(top = 4.dp))
+                androidx.compose.foundation.layout.Row(Modifier.padding(top = 8.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.Button(onClick = { onPlay(ready, 0) }, enabled = ready.isNotEmpty()) {
+                        com.magnatune.player.ui.components.FaIcon(com.magnatune.player.ui.components.Fa.play, null, size = 16.dp); Text("  Play")
+                    }
+                    androidx.compose.material3.OutlinedButton(onClick = { onPlay(ready.shuffled(), 0) }, enabled = ready.isNotEmpty()) {
+                        Text("Shuffle")
+                    }
+                    if (dl.failed.isNotEmpty()) {
+                        androidx.compose.material3.OutlinedButton(onClick = { vm.retryFailedDownloads() }) {
+                            Text("Retry ${dl.failed.size} failed")
+                        }
+                    }
+                }
+            }
+            HorizontalDivider()
+        }
+        items(ordered, key = { it.id }) { t ->
+            val isReady = t.id in dl.downloaded
+            androidx.compose.foundation.layout.Box(Modifier.then(if (isReady) Modifier else Modifier.alpha(0.55f))) {
+                SongRow(t.song, artistName = t.artistName, albumName = t.album.name, showArtwork = true,
+                    onClick = { ready.indexOfFirst { it.id == t.id }.takeIf { it >= 0 }?.let { onPlay(ready, it) } })
+            }
         }
     }
 }

@@ -68,6 +68,10 @@ object UrlBuilder {
         return media("/music/$artistName/$albumName/$file")
     }
 
+    /** Member Opus file for offline downloads: `<stem>_hi.opus` (192k) or `<stem>.opus` (96k). */
+    fun opusDownloadUrl(artistName: String, albumName: String, song: Song, high: Boolean): String =
+        media("/music/$artistName/$albumName/${stem(song.mp3)}${if (high) "_hi" else ""}.opus")
+
     /** Album cover thumbnail. Sizes: 50,75,100,150,200,300,400,600,800,1400 (jpg). Free (no auth). */
     fun coverUrl(artistName: String, albumName: String, size: Int): String =
         media("/music/$artistName/$albumName/cover_$size.jpg")

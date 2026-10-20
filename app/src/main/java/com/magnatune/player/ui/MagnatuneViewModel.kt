@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,6 +104,7 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     suspend fun firstAlbumName(artistId: Long) = io { firstAlbumName(artistId) }
     suspend fun album(id: Long) = io { album(id) }
     suspend fun songsForAlbum(id: Long) = io { songsForAlbum(id) }
+    suspend fun playableForSongIds(ids: List<Long>): List<PlayableTrack> = io { makePlayable(ids.mapNotNull { song(it) }) }
     suspend fun artistsForGenre(id: Long) = io { artistsForGenre(id) }
     suspend fun albumsForGenre(id: Long) = io { albumsForGenre(id) }
     suspend fun albumsForTag(id: Long) = io { albumsForTag(id) }
@@ -137,7 +140,10 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     // a tag / Featured playlist left with no visible item is hidden. When the toggle is off
     // nothing is suppressed. Screens collect this and filter their lists, so disliking
     // updates the UI live.
-    val suppression: StateFlow<Suppression> = combine(
+    //
+    // Offline (mirrors iOS visibleX): everything not downloaded is folded into the same hidden
+    // sets, so every screen that already filters by suppression shows only downloaded music.
+    private val dislikeSuppression = combine(
         userStore.dislikedArtistIds,
         userStore.dislikedAlbumIds,
         userStore.dislikedSongIds,
@@ -146,7 +152,33 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     ) { dArtists, dAlbums, dSongs, dGenres, hide ->
         if (!hide) Suppression()
         else withContext(Dispatchers.IO) { computeSuppression(dArtists, dAlbums, dSongs, dGenres) }
+    }
+    val suppression: StateFlow<Suppression> = combine(
+        dislikeSuppression,
+        container.isOnline,
+        container.downloads.status.map { it.downloaded }.distinctUntilChanged(),
+    ) { dislikes, online, downloaded ->
+        if (online) dislikes
+        else withContext(Dispatchers.IO) { dislikes.plus(computeOfflineHidden(downloaded)) }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Suppression())
+
+    /** Everything NOT reachable from a downloaded song (iOS refreshDownloadedSets, inverted). */
+    private fun computeOfflineHidden(downloaded: Set<Long>): Suppression {
+        val c = container.catalog
+        val ids = downloaded.toList()
+        val (albums, artists) = c.albumAndArtistIDsForSongs(ids)
+        val genres = c.genreIDsForAlbums(albums.toList())
+        val tags = c.tagIDsForAlbums(albums.toList())
+        val playlists = c.catalogPlaylistIDsForSongs(ids)
+        return Suppression(
+            artists = c.allArtists().map { it.id }.toSet() - artists,
+            albums = c.allAlbums().map { it.id }.toSet() - albums,
+            songs = c.allSongIds() - downloaded,
+            genres = c.allGenres().map { it.id }.toSet() - genres,
+            tags = c.allTags().map { it.id }.toSet() - tags,
+            playlists = c.catalogPlaylists().map { it.id }.toSet() - playlists,
+        )
+    }
 
     private fun computeSuppression(
         dArtists: Set<Long>, dAlbums: Set<Long>, dSongs: Set<Long>, dGenres: Set<Long>,
@@ -272,6 +304,7 @@ class MagnatuneViewModel(val container: AppContainer) : ViewModel() {
     val downloads get() = container.downloads
     val isOnline get() = container.isOnline
     fun clearDownloads() = viewModelScope.launch { container.downloads.clearAll() }
+    fun retryFailedDownloads() = viewModelScope.launch { container.downloads.retryFailed() }
     fun syncDownloadsNow() = viewModelScope.launch { container.downloads.syncAutoDownloads(respectToggle = false) }
 
     // ---- catalog status ----
@@ -302,4 +335,9 @@ data class Suppression(
     val genres: Set<Long> = emptySet(),
     val tags: Set<Long> = emptySet(),
     val playlists: Set<Long> = emptySet(),
-)
+) {
+    operator fun plus(o: Suppression) = Suppression(
+        artists + o.artists, albums + o.albums, songs + o.songs,
+        genres + o.genres, tags + o.tags, playlists + o.playlists,
+    )
+}

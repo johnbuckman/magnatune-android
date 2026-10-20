@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -294,7 +295,15 @@ private fun ContentTopBar(nav: NavController, compact: Boolean = false) {
 
 @Composable
 private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPlay, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize()) {
+    val dl by vm.downloads.status.collectAsStateWithLifecycle()
+    val online by vm.isOnline.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.magnatune.player.ui.components.LocalDownloadStatus provides dl,
+        com.magnatune.player.ui.components.LocalRetryDownloads provides { vm.retryFailedDownloads() },
+    ) {
+    androidx.compose.foundation.layout.Column(modifier.fillMaxSize()) {
+    if (!online) com.magnatune.player.ui.components.OfflineBanner(dl.downloaded.size)
+    Box(Modifier.weight(1f).fillMaxSize()) {
         NavHost(nav, startDestination = Routes.POPULAR) {
             composable(Routes.POPULAR) { PopularScreen(vm, nav) }
             composable(Routes.ARTISTS) { ArtistsScreen(vm, nav) }
@@ -306,6 +315,7 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
             composable(Routes.SEARCH) { SearchScreen(vm, nav, onPlay) }
             composable(Routes.FAVORITES) { FavoritesScreen(vm, nav, onPlay) }
             composable(Routes.PLAYLISTS) { PlaylistsScreen(vm, nav, onPlay) }
+            composable(Routes.DOWNLOADS) { com.magnatune.player.ui.screens.DownloadsScreen(vm, onPlay) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(vm, onShowHelp = {
                     nav.navigate(Routes.HELP) { popUpTo(Routes.POPULAR); launchSingleTop = true }
@@ -333,6 +343,8 @@ private fun MainNav(vm: MagnatuneViewModel, nav: NavHostController, onPlay: OnPl
             longArg(Routes.CATALOG_PLAYLIST) { CatalogPlaylistDetailScreen(vm, nav, it, onPlay) }
             longArg(Routes.USER_PLAYLIST) { com.magnatune.player.ui.screens.UserPlaylistDetailScreen(vm, nav, it, onPlay) }
         }
+    }
+    }
     }
 }
 

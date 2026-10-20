@@ -50,7 +50,7 @@ class Settings(context: Context) {
     val hideDislikes: StateFlow<Boolean> = _hideDislikes
     fun setHideDislikes(v: Boolean) = _hideDislikes.set("dislike.hide.enabled", v)
 
-    private val _autoDownload = bool("autodownload.favorites", false)
+    private val _autoDownload = bool("autodownload.favorites", true)   // default ON (iOS parity)
     val autoDownloadFavorites: StateFlow<Boolean> = _autoDownload
     fun setAutoDownload(v: Boolean) = _autoDownload.set("autodownload.favorites", v)
 

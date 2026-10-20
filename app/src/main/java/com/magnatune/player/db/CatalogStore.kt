@@ -133,6 +133,7 @@ class CatalogStore(path: String) {
     fun songsForAlbum(albumId: Long) =
         query("SELECT * FROM songs WHERE album_id = ? ORDER BY track_no", arrayOf(albumId.toString()), ::toSong)
     fun songsForArtist(artistId: Long) = albumsForArtist(artistId).flatMap { songsForAlbum(it.id) }
+    fun allSongIds(): Set<Long> = query("SELECT song_id FROM songs") { it.long("song_id") }.toSet()
     fun song(id: Long) = queryOne("SELECT * FROM songs WHERE song_id = ?", arrayOf(id.toString()), ::toSong)
 
     // ---- Genres ----

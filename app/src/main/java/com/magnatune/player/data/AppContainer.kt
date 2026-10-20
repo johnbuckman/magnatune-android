@@ -35,10 +35,13 @@ class AppContainer(context: Context) {
 
     val playback = com.magnatune.player.service.PlaybackController(
         context = context, scope = appScope, credentials = credentials, settings = settings,
-        userStore = userStore, downloadPath = { userStore.downloadPath(it) },
+        userStore = userStore, downloadPath = { downloads.localPath(it) },
     )
 
-    val downloads = DownloadManager(context, credentials, settings, userStore) { catalog }
+    /** Whether the device currently has a usable network. */
+    val isOnline = MutableStateFlow(true)
+
+    val downloads = DownloadManager(context, credentials, settings, userStore, { catalog }, isOnline)
 
     /** AirPlay receiver discovery (drives the AirPlay icon's visibility + picker). */
     val airplay = com.magnatune.player.peer.AirPlayDiscovery(context).also { it.start() }
@@ -61,9 +64,6 @@ class AppContainer(context: Context) {
         }
     }
 
-    /** Whether the device currently has a usable network. */
-    val isOnline = MutableStateFlow(true)
-
     /** The peer we'd surface for remote control: the most-recently-started peer that's playing
      *  while local playback is idle (mirrors iOS remoteFocus — local playback always wins). */
     val remoteFocus: kotlinx.coroutines.flow.StateFlow<com.magnatune.player.peer.PeerService.PeerInfo?> =
@@ -83,6 +83,11 @@ class AppContainer(context: Context) {
             override fun onAvailable(network: Network) { isOnline.value = true }
             override fun onLost(network: Network) { isOnline.value = false }
         })
+        // Offline: mark the download queue paused. Back online: resume it (WorkManager's network
+        // constraint restarts the worker on its own; the sync also picks up favorites added offline).
+        isOnline.drop(1)
+            .onEach { online -> if (online) downloads.syncAutoDownloads() else downloads.updatePaused() }
+            .launchIn(appScope)
         // Auto-download favorites: re-sync when favorites, the toggle, membership, or connectivity change.
         combine(
             userStore.favoriteSongIds, userStore.favoriteAlbumIds, userStore.favoriteArtistIds,
